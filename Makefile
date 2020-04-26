@@ -53,19 +53,19 @@ LINK.EXE = ${LD} -o $@.bin $(LDFLAGS) $(filter-out Makefile utils,$^) $(LDLIBS)
 LINK.SO = ${LD} -shared $(LDFLAGS) $(filter-out Makefile utils,$^) $(LDLIBS)
 LINK.A = ${AR} rsc $@ $(filter-out Makefile,$^)
 
-all : | create_build_dir utils \
-                         bridge_agent \
-                         accelerator_agent \
-                         runtime_agent \
-                         virtualization_agent # Build all exectuables.
+all : create_build_dir utils \
+                       bridge_agent \
+                       accelerator_agent \
+                       runtime_agent \
+                       virtualization_agent # Build all exectuables.
 
-add_util_objs           := $(wildcard $(build_dir)/utils/src/* )
+add_util_objs            = $(wildcard $(build_dir)/utils/src/* )
 add_agent_dependencies  := $$(patsubst $(CURDIR)%.cc, $(build_dir)%.o, $$(wildcard $(CURDIR)/$$@/src/* ) )
 add_api_dependencies    := $$(patsubst $(CURDIR)%.cc, $(build_dir)%.o, $$(wildcard $$(AGENT_API_DIRS) ) )
 
 ###########################################################################################
 #first level utils compilation
-utils : $(add_agent_dependencies) ;
+utils : $(add_agent_dependencies) 
 
 ###########################################################################################
 #top level object generation
@@ -74,7 +74,7 @@ accelerator_agent : AGENT_API_DIRS = $(CURDIR)/bridge_agent/api/src/* \
                                      $(CURDIR)/virtualization_agent/common/api/src/*
 #first level agent compiling
 accelerator_agent : utils $(add_api_dependencies) $(add_agent_dependencies) 
-	  $(LINK.EXE) $(add_util_objs)
+	$(LINK.EXE) $(add_util_objs)
 ###########################################################################################
 
 ###########################################################################################
@@ -84,7 +84,7 @@ bridge_agent : AGENT_API_DIRS = $(CURDIR)/bridge_agent/api/src/* \
                                 $(CURDIR)/runtime_agent/api/src/*
 #first level agent compiling
 bridge_agent : utils $(add_api_dependencies) $(add_agent_dependencies) 
-	  $(LINK.EXE) $(add_util_objs)
+	$(LINK.EXE) $(add_util_objs)
 ###########################################################################################
 
 ###########################################################################################
@@ -93,7 +93,7 @@ runtime_agent : AGENT_API_DIRS = $(CURDIR)/bridge_agent/api/src/* \
                                  $(CURDIR)/runtime_agent/api/src/*
 #first level agent compiling
 runtime_agent : utils $(add_api_dependencies) $(add_agent_dependencies) 
-	              $(LINK.SO) -o libmpix.so $(add_util_objs) -lmpich -fvisibility=hidden
+	$(LINK.SO) -o libmpix.so $(add_util_objs) -lmpich -fvisibility=hidden
 ###########################################################################################
 
 ###########################################################################################
@@ -103,8 +103,6 @@ PICO_COMMON_SRCS := $(patsubst $(CURDIR)/%, $(build_dir)%.$$@, $(wildcard $(CURD
  
 #first level agent compiling
 virtualization_agent   : $(PICO_MK_DIRS)
-	  @echo Completed $^
-#	$(MOVE_EXE) #move all object files to the root build folder
 
 $(PICO_MK_DIRS) : export DEPENDS := $(CURDIR)/ \
                                     $(CURDIR)/accelerator_agent/api/ \
@@ -112,7 +110,6 @@ $(PICO_MK_DIRS) : export DEPENDS := $(CURDIR)/ \
                                     $(CURDIR)/virtualization_agent/common/ \
                                     $(CURDIR)/utils/
 $(PICO_MK_DIRS) : 
-	@echo Found Makefile $@
 	$(MAKE) -C $@ all PMAIN=$@
                          
 #####################################################################################
