@@ -1,9 +1,0 @@
-Library is initialized
-asa : asa
-job_id : f2IIV2AmpghGqhl1
-host file : 
-async : 0
-mpi runtime NOT initialized!
-entering mpi_proc_impl::mpi_init
-mpi runtime NOT initialized!
-Library is exited
