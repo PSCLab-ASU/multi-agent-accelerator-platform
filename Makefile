@@ -49,63 +49,67 @@ LDLIBS          :=
 COMPILE.CXX = ${CXX} -c $^ -o $@ -I$(dir $^)../include/ $(patsubst %/src/*, -I%/include, $(AGENT_API_DIRS) ) -I$(UTILS_HDRS) ${CXXFLAGS}
 PREPROCESS.CXX = ${CXX} -E -o $@ ${CPPFLAGS} ${CXXFLAGS} $(abspath $<)
 COMPILE.C = ${CC} -c -o $@ ${CPPFLAGS} -MD -MP ${CFLAGS} $(abspath $<)
-LINK.EXE = ${LD} -o $@_agent $(LDFLAGS) $(filter-out Makefile utils,$^) $(LDLIBS)
+LINK.EXE = ${LD} -o $@.bin $(LDFLAGS) $(filter-out Makefile utils,$^) $(LDLIBS)
 LINK.SO = ${LD} -shared $(LDFLAGS) $(filter-out Makefile utils,$^) $(LDLIBS)
 LINK.A = ${AR} rsc $@ $(filter-out Makefile,$^)
 
-all : | create_build_dir client xcelerate nexus pico # Build all exectuables.
+all : | create_build_dir utils \
+                         bridge_agent \
+                         accelerator_agent \
+                         runtime_agent \
+                         virtualization_agent # Build all exectuables.
 
 add_util_objs           := $(wildcard $(build_dir)/utils/src/* )
 add_agent_dependencies  := $$(patsubst $(CURDIR)%.cc, $(build_dir)%.o, $$(wildcard $(CURDIR)/$$@/src/* ) )
 add_api_dependencies    := $$(patsubst $(CURDIR)%.cc, $(build_dir)%.o, $$(wildcard $$(AGENT_API_DIRS) ) )
 
-#####################################################################################
+###########################################################################################
 #first level utils compilation
 utils : $(add_agent_dependencies) ;
 
-#####################################################################################
+###########################################################################################
 #top level object generation
-nexus : AGENT_API_DIRS = $(CURDIR)/xcelerate/api/src/* \
-                         $(CURDIR)/nexus/api/src/* \
-                         $(CURDIR)/pico/common/api/src/*
+accelerator_agent : AGENT_API_DIRS = $(CURDIR)/bridge_agent/api/src/* \
+                                     $(CURDIR)/accelerator_agent/api/src/* \
+                                     $(CURDIR)/virtualization_agent/common/api/src/*
 #first level agent compiling
-nexus : utils $(add_api_dependencies) $(add_agent_dependencies) 
+accelerator_agent : utils $(add_api_dependencies) $(add_agent_dependencies) 
 	  $(LINK.EXE) $(add_util_objs)
-#####################################################################################
+###########################################################################################
 
-#####################################################################################
+###########################################################################################
 #top level object generation
-xcelerate : AGENT_API_DIRS = $(CURDIR)/xcelerate/api/src/* \
-                             $(CURDIR)/nexus/api/src/* \
-                             $(CURDIR)/client_interface/api/src/*
+bridge_agent : AGENT_API_DIRS = $(CURDIR)/bridge_agent/api/src/* \
+                                $(CURDIR)/accelerator_agent/api/src/* \
+                                $(CURDIR)/runtime_agent/api/src/*
 #first level agent compiling
-xcelerate : utils $(add_api_dependencies) $(add_agent_dependencies) 
+bridge_agent : utils $(add_api_dependencies) $(add_agent_dependencies) 
 	  $(LINK.EXE) $(add_util_objs)
-#####################################################################################
+###########################################################################################
 
-#####################################################################################
+###########################################################################################
 #top level object generation
-client : AGENT_API_DIRS = $(CURDIR)/xcelerate/api/src/* \
-                          $(CURDIR)/client/api/src/*
+runtime_agent : AGENT_API_DIRS = $(CURDIR)/bridge_agent/api/src/* \
+                                 $(CURDIR)/runtime_agent/api/src/*
 #first level agent compiling
-client : utils $(add_api_dependencies) $(add_agent_dependencies) 
-	  $(LINK.SO) -o libmpix.so $(add_util_objs) -lmpich -fvisibility=hidden
-#####################################################################################
+runtime_agent : utils $(add_api_dependencies) $(add_agent_dependencies) 
+	              $(LINK.SO) -o libmpix.so $(add_util_objs) -lmpich -fvisibility=hidden
+###########################################################################################
 
-#####################################################################################
+###########################################################################################
 #top level object generation
-PICO_MK_DIRS := $(dir $(wildcard $(CURDIR)/pico/*/Makefile) ) 
-PICO_COMMON_SRCS := $(patsubst $(CURDIR)/%, $(build_dir)%.$$@, $(wildcard $(CURDIR)/pico/common/src/*) )
+PICO_MK_DIRS := $(dir $(wildcard $(CURDIR)/virtualization_agent/*/Makefile) ) 
+PICO_COMMON_SRCS := $(patsubst $(CURDIR)/%, $(build_dir)%.$$@, $(wildcard $(CURDIR)/virtualization_agent/common/src/*) )
  
 #first level agent compiling
-pico   : $(PICO_MK_DIRS)
+virtualization_agent   : $(PICO_MK_DIRS)
 	  @echo Completed $^
 #	$(MOVE_EXE) #move all object files to the root build folder
 
 $(PICO_MK_DIRS) : export DEPENDS := $(CURDIR)/ \
-                                    $(CURDIR)/nexus/api/ \
-                                    $(CURDIR)/pico/common/api/ \
-                                    $(CURDIR)/pico/common/ \
+                                    $(CURDIR)/accelerator_agent/api/ \
+                                    $(CURDIR)/virtualization_agent/common/api/ \
+                                    $(CURDIR)/virtualization_agent/common/ \
                                     $(CURDIR)/utils/
 $(PICO_MK_DIRS) : 
 	@echo Found Makefile $@
@@ -130,6 +134,6 @@ ${build_dir} ${OUTPUT_DIRS} :
 clean:
 	rm -rf ${build_dir}
 
-.PHONY : clean all pico $(PICO_MK_DIRS)
+.PHONY : clean all virtualization_agent $(PICO_MK_DIRS)
 
 # ==== End rest of boilerplate

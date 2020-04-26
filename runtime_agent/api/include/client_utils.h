@@ -18,7 +18,6 @@
 #include <condition_variable>
 #include <functional>
 #include <zmsg_builder.h>
-#include <mpi_computeobj.h>
 #include <mpi.h>
 
 #ifndef CLIENT_UTILS
@@ -60,12 +59,6 @@ namespace client_utils
   zmsg_builder<std::string, std::string, std::string>
     reroute_waitable_message(std::string, std::string, client_ctrl, zmq::multipart_t&& );
  
-
-  size_t compute_cobj_size( const MPI_ComputeObj * );
-
-  std::unique_ptr<void, cobj_deleter_t>
-    serialize_cobj( const MPI_ComputeObj* );
-
 }
 
 

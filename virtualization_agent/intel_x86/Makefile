@@ -8,9 +8,9 @@ PMAIN       ?= $(CURDIR)
 DEST        := $(PMAIN)$(BUILD)
 
 code_base   := $(strip $(word 1, $(DEPENDS) ) )
-nexus_api   := $(strip $(word 2, $(DEPENDS) ) )
-pico_api    := $(strip $(word 3, $(DEPENDS) ) )
-pico_common := $(strip $(word 4, $(DEPENDS) ) )
+aa_api      := $(strip $(word 2, $(DEPENDS) ) )
+va_api      := $(strip $(word 3, $(DEPENDS) ) )
+va_common   := $(strip $(word 4, $(DEPENDS) ) )
 utils_      := $(strip $(word 5, $(DEPENDS) ) )
 
 COMPILER=gcc
@@ -39,18 +39,18 @@ LDLIBS          :=
 # tHe ../api/include folder should not be here the API build should be separate
 # The internal agent shouldn't use anything from this API TBD
 COMPILE.CXX = ${CXX} -c $(patsubst $(DEST)/%.o, $(code_base)%.cc, $@) -o $@ $(addprefix -I, $(sort $(dir $(filter %.h, $^)))) ${CXXFLAGS}
-COMPILE2.CXX = ${CXX} -c $(patsubst $(DEST)/pico/%.o, $(PMAIN)%.cc, $@) -o $@ $(addprefix -I, $(sort $(dir $(filter %.h, $^)))) ${CXXFLAGS}
+COMPILE2.CXX = ${CXX} -c $(patsubst $(DEST)/virtualization_agent/%.o, $(PMAIN)%.cc, $@) -o $@ $(addprefix -I, $(sort $(dir $(filter %.h, $^)))) ${CXXFLAGS}
 LINK.EXE = ${LD} $(shell find $(DEST) -name '*.o') -o $(DEST)/bin/$(BINARY_NAME) $(LDFLAGS) $(LDLIBS)
 ##############################################################################################################
 #main entry point
-all : create_build_dir utils_common nexus_api pico_api pico_common pico_main # Build all exectuables.
+all : create_build_dir utils_common aa_api va_api va_common va_main # Build all exectuables.
 
 ###############################################################################################################
-utils_common : $$(patsubst $(utils_)%.cc,      $(DEST)/utils/%.o,           $$(wildcard $(utils_)src/*      ) )
-nexus_api    : $$(patsubst $(nexus_api)%.cc,   $(DEST)/nexus/api/%.o,       $$(wildcard $(nexus_api)src/*   ) ) 
-pico_api     : $$(patsubst $(pico_api)%.cc,    $(DEST)/pico/common/api/%.o, $$(wildcard $(pico_api)src/*    ) ) 
-pico_common  : $$(patsubst $(pico_common)%.cc, $(DEST)/pico/common/%.o,     $$(wildcard $(pico_common)src/* ) ) 
-pico_main    : $$(patsubst $(PMAIN)/%.cc,      $(DEST)/pico/%.o,            $$(wildcard $(PMAIN)/src/*      ) ) 
+utils_common : $$(patsubst $(utils_)%.cc,      $(DEST)/utils/%.o,                           $$(wildcard $(utils_)src/*    ) )
+aa_api       : $$(patsubst $(aa_api)%.cc,      $(DEST)/accelerator_agent/api/%.o,           $$(wildcard $(aa_api)src/*    ) ) 
+va_api       : $$(patsubst $(va_api)%.cc,      $(DEST)/virtualization_agent/common/api/%.o, $$(wildcard $(va_api)src/*    ) ) 
+va_common    : $$(patsubst $(va_common)%.cc,   $(DEST)/virtualization_agent/common/%.o,     $$(wildcard $(va_common)src/* ) ) 
+va_main      : $$(patsubst $(PMAIN)/%.cc,      $(DEST)/virtualization_agent/%.o,            $$(wildcard $(PMAIN)/src/*    ) ) 
 	@echo Linking pico services...
 	$(LINK.EXE)
 ###############################################################################################################
@@ -58,17 +58,17 @@ pico_main    : $$(patsubst $(PMAIN)/%.cc,      $(DEST)/pico/%.o,            $$(w
 $(DEST)/utils/%.o : $(utils_)src/*.cc $(utils_)include/*.h
 	$(COMPILE.CXX)
 
-$(DEST)/nexus/%.o : utils_common $(nexus_api)src/*.cc $(nexus_api)include/*.h
+$(DEST)/accelerator_agent/%.o : utils_common $(aa_api)src/*.cc $(aa_api)include/*.h
 	$(COMPILE.CXX) -I$(utils_)include
 
-$(DEST)/pico/common/api/%.o : utils_common $(pico_api)src/*.cc $(pico_api)include/*.h
+$(DEST)/virtualization_agent/common/api/%.o : utils_common $(va_api)src/*.cc $(va_api)include/*.h
 	$(COMPILE.CXX) -I$(utils_)include
 
-$(DEST)/pico/common/%.o : utils_common nexus_api pico_api $(pico_common)src/*.cc $(pico_common)include/*.h
-	$(COMPILE.CXX) -I$(utils_)include -I$(nexus_api)include -I$(pico_api)include -I$(PMAIN)include/
+$(DEST)/virtualization_agent/common/%.o : utils_common aa_api va_api $(va_common)src/*.cc $(va_common)include/*.h
+	$(COMPILE.CXX) -I$(utils_)include -I$(aa_api)include -I$(va_api)include -I$(PMAIN)include/
 
-$(DEST)/pico/src/%.o : utils_common $(PMAIN)src/*.cc $(PMAIN)include/*.h
-	$(COMPILE2.CXX) -I$(utils_)include -I$(nexus_api)include -I$(pico_api)include -I$(pico_common)include/ 
+$(DEST)/virtualization_agent/src/%.o : utils_common $(PMAIN)src/*.cc $(PMAIN)include/*.h
+	$(COMPILE2.CXX) -I$(utils_)include -I$(aa_api)include -I$(va_api)include -I$(va_common)include/ 
 
 # Create the build directory and sub dirs on demand.
 create_build_dir : ${DEST}
@@ -77,15 +77,15 @@ ${DEST} :
 	mkdir -p $@
 	mkdir -p $@/bin
 	mkdir -p $@/utils/src/
-	mkdir -p $@/nexus/api/src/
-	mkdir -p $@/pico/src/
-	mkdir -p $@/pico/common/api/src/
-	mkdir -p $@/pico/common/src/
+	mkdir -p $@/accelerator_agent/api/src/
+	mkdir -p $@/virtualization_agent/src/
+	mkdir -p $@/virtualization_agent/common/api/src/
+	mkdir -p $@/virtualization_agent/common/src/
 
 clean:
 	rm -rf ${DEST}
 
-.PHONY : clean all create_build_dir nexus_api pico_api pico_common pico_main utils_common
+.PHONY : clean all create_build_dir aa_api va_api va_common va_main utils_common
 
 
 # ==== End rest of boilerplate
