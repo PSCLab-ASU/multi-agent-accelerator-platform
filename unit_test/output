@@ -1,5 +1,0 @@
-g++: error: nexus/nexus_utils.cc: No such file or directory
-g++: error: client_interface/client_utils.cc: No such file or directory
-g++: error: client_interface/mpi_computeobj.cc: No such file or directory
-g++: error: utils/*: No such file or directory
-g++: error: xcelerate/*: No such file or directory
