@@ -1,0 +1,14 @@
+{
+  "host_list" : [],
+				 
+  "func_list" : [{"func_alias" : "VEC_ARITH", "func_repl":"1" , "platform_id" : "rr_scat","sw_fid" : "12345" }, 
+                 {"func_alias" : "conv2", "platform_id" : "rr_scat"},
+		 {"func_alias" : "conv3", "platform_id" : "rr_scat"},
+		 {"func_alias" : "conv4", "platform_id" : "rr_scat"},
+		 {"func_alias" : "conv5", "platform_id" : "rr_scat"}],
+				 
+  "platform_list" :  [{"platform_id" : "rr_scat", "recommendation_strategy" : "RR_SCATTER" },
+                     {"platform_id" : "rr_scat2", "recommendation_strategy" : "RR_SCATTER" },
+		     {"platform_id" : "rr_scat3", "recommendation_strategy" : "RR_SCATTER" },
+		     {"platform_id" : "rr_scat4", "recommendation_strategy" : "RR_SCATTER" }]
+}
