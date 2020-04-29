@@ -284,7 +284,7 @@ pico_return collage::_col_send_req( PICO_IN_TYPE ) //vars are request, and reply
   req->set_header( _crh );
 
   //The two is based on the header section ( resource_str and nargs )
-  for(auto i : iota(2,nargs+2) )
+  for(auto i : iota((ulong)2,nargs+2) )
   {
     auto[b_sign, b_type, type_size, v_size, msg] = 
       request.get_memblk(i); 
@@ -332,7 +332,7 @@ pico_return collage::_col_send_resp( PICO_OUT_TYPE ) //vars are request, and rep
     //add number of args to return
     mbuilder.add_arbitrary_data((ulong) nargs);  
     
-    for(auto i : iota(0, nargs) )
+    for(auto i : iota((size_t)0, nargs) )
     {
       auto [header, data] = payload.pop_output();
       auto[sign_v, d_type, type_size, vec_size] = header;

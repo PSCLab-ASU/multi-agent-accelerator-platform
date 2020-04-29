@@ -90,7 +90,7 @@ void mpi_accel_impl::_process_recv_message(mpi_recv_pmsg& recv,  MPI_ComputeObj*
     
     cobj->num_args = num_args = *(zmsg.at(5).data<ulong>()); 
     
-    for(auto i : std::ranges::views::iota(0, num_args) ) 
+    for(auto i : std::ranges::views::iota((ulong)0, num_args) ) 
     {
        cobj->types[i]   = *(zmsg.at(9+i*6).data<ulong>());
        cobj->lengths[i] = *(zmsg.at(7+i*6).data<ulong>());

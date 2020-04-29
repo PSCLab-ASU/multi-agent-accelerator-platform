@@ -76,7 +76,7 @@ send_payload::send_payload( arg_headers_t&& headers, base_type_t && base_data )
     std::cout << "-- Unbalanced send_payload ... " << std::endl;
 
   //create elements
-  for( auto i : iota(0, get_nargs() ) )
+  for( auto i : iota((ulong)0, get_nargs() ) )
   {
     //std::cout << "type = " << types[i] << ", size = " << sizes[i] << std::endl;
     //for(int j=0; j < sizes[i]; j++ ) std::cout << (((const float *) vpdata[i])[j]) << std::endl;  

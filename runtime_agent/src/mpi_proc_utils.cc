@@ -15,7 +15,7 @@ std::pair<int, std::pair<std::vector<int>, std::vector<int> >  >
     return {0, { {}, {} } };
   }
 
-  for(auto i : std::ranges::views::iota(0, types.size() ) )
+  for(auto i : std::ranges::views::iota((size_t)0, types.size() ) )
   {
     MPI_Type_size(types[i], &lbytes);
     bytes += lbytes*sizes[i] + sizeof(int);

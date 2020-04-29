@@ -12,7 +12,7 @@ struct thread_group
 {
   public:
     thread_group(std::uint64_t n, std::invocable<std::stop_token> auto&& f){
-      for(auto i : std::ranges::views::iota(0,n)) members.emplace_back(f);
+      for(auto i : std::ranges::views::iota((uint64_t) 0,n)) members.emplace_back(f);
     }
     
     auto size() { return members.size(); }
