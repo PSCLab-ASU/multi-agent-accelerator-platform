@@ -19,9 +19,10 @@ CC.gcc  := gcc
 LD.gcc  := gcc
 AR.gcc  := ar
 
-CXXFLAGS.gcc.debug := -Og -fstack-protector-all
+#Pico Service only works with -O0, NEED TO Fix for -O3
+CXXFLAGS.gcc.debug := -O0 -gdwarf-2 -fstack-protector-all
 CXXFLAGS.gcc.release := -O3 -march=native -DNDEBUG
-CXXFLAGS.gcc := -pthread -std=c++2a -fconcepts-ts -fPIC -Wno-return-type -Wno-return-local-addr ${CXXFLAGS.gcc.${BUILD}}
+CXXFLAGS.gcc := -std=c++2a -fconcepts-ts -fPIC -Wno-return-type -Wno-return-local-addr ${CXXFLAGS.gcc.${BUILD}}
 
 CXXFLAGS := ${CXXFLAGS.${COMPILER}}
 CFLAGS   := ${CFLAGS.${COMPILER}}
@@ -30,7 +31,7 @@ CC       := ${CC.${COMPILER}}
 LD       := ${LD.${COMPILER}}
 AR       := ${AR.${COMPILER}}
 
-LDFLAGS.common  := -lstdc++ -lzmq -lpthread -lzmq -lboost_system -lboost_thread
+LDFLAGS.common  := -lstdc++ -lzmq -lpthread -lzmq -lboost_system -lboost_thread -lboost_iostreams
 LDFLAGS.debug   := $(LDFLAGS.common)
 LDFLAGS.release := $(LDFLAGS.common)
 LDFLAGS         := ${LDFLAGS.${BUILD}}
@@ -56,18 +57,24 @@ va_main      : $$(patsubst $(PMAIN)/%.cc,      $(DEST)/virtualization_agent/%.o,
 ###############################################################################################################
 #Object build rules
 $(DEST)/utils/%.o : $(utils_)src/*.cc $(utils_)include/*.h
+	@echo Compiling $@ ...
 	$(COMPILE.CXX)
 
-$(DEST)/accelerator_agent/%.o : utils_common $(aa_api)src/*.cc $(aa_api)include/*.h
+$(DEST)/accelerator_agent/%.o : $(aa_api)src/*.cc $(aa_api)include/*.h
+	@echo Compiling $@ ...
 	$(COMPILE.CXX) -I$(utils_)include
 
-$(DEST)/virtualization_agent/common/api/%.o : utils_common $(va_api)src/*.cc $(va_api)include/*.h
+$(DEST)/virtualization_agent/common/api/%.o : $(va_api)src/*.cc $(va_api)include/*.h
+	@echo Compiling $@ ...
 	$(COMPILE.CXX) -I$(utils_)include
 
-$(DEST)/virtualization_agent/common/%.o : utils_common aa_api va_api $(va_common)src/*.cc $(va_common)include/*.h
-	$(COMPILE.CXX) -I$(utils_)include -I$(aa_api)include -I$(va_api)include -I$(PMAIN)include/
+$(DEST)/virtualization_agent/common/src/%.o : $(va_common)src/%.cc $(wildcard $(va_common)include/%.h)
+	@echo Compiling $@ ...
+	$(COMPILE.CXX) -I$(utils_)include -I$(aa_api)include \
+                       -I$(va_api)include -I$(va_common)include/ -I$(PMAIN)include/ 
 
-$(DEST)/virtualization_agent/src/%.o : utils_common $(PMAIN)src/*.cc $(PMAIN)include/*.h
+$(DEST)/virtualization_agent/src/%.o : $(PMAIN)src/*.cc $(PMAIN)include/*.h
+	@echo Compiling $@ ...
 	$(COMPILE2.CXX) -I$(utils_)include -I$(aa_api)include -I$(va_api)include -I$(va_common)include/ 
 
 # Create the build directory and sub dirs on demand.
@@ -85,7 +92,8 @@ ${DEST} :
 clean:
 	rm -rf ${DEST}
 
-.PHONY : clean all create_build_dir aa_api va_api va_common va_main utils_common
+#.PHONY : clean all create_build_dir aa_api va_api va_common va_main utils_common
+.PHONY : clean all
 
 
 # ==== End rest of boilerplate
