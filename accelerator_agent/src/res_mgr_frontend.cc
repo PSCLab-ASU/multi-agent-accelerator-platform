@@ -314,23 +314,9 @@ int resmgr_frontend::_res_hwreg_(zmq::multipart_t * req, zmq::multipart_t  * rep
   //build all hardware elements
   for(ulong i=0; i < len; i++)
   {
-    std::string pcie_desc = req->popstr();
-    auto entry = split_str<':'>( pcie_desc );
-    shwe hwe = shwe(entry[0], entry[1], entry[2], entry[3]);
-    //step 2: run lspci and set the hardware state in the hw_tracker
-    //        on whether the hardware exist in this nexus
-    //vec<pcie_device_id>
-    auto pcie_devices = get_pci_devices(pcie_desc);
-    
-    for(auto pcie_device : pcie_devices)
-    {
-      //activate the hardware element
-      hwe.hw_state = true;
-      hwe.NumDevices = pcie_devices.size();
-      hwe.bus_ids.push_back(pcie_device.bus_id);
-    }
-    //add resource to the hw_list
-    hwt->hw_elements.push_back(hwe);
+    std::string kcache = req->popstr();
+    std::cout << "Adding resource to hw_tracker : " << kcache << std::endl;
+    hwt->edit_caches().add_resource( kcache );
   }
 
   return 0;
@@ -402,18 +388,8 @@ int resmgr_frontend::_res_hwupdate_(zmq::multipart_t * req, zmq::multipart_t  * 
   {
     
     std::string entry = req->popstr();
-    std::multimap<std::string, std::string> mmap;
-    parse_sw_resource(entry, mmap);
-    std::string id = mmap.find("id")->second; //format: a:b:c:d:e:f:g:h
-    auto ids = split_str<':'>(id);
-    shwe& hwe = tHW->find_create_elem({ids[0], ids[1], ids[2], ids[3]});
-    //////////////////////////////////////////////////////////////////////////////////////
-    //find or add software element swe
-    sswe& swe = hwe.find_create_elem({ids[4], ids[5]});
-    //////////////////////////////////////////////////////////////////////////////////////
-    //find or add function ement
-    sfunce& sfe = swe.find_create_elem(mmap);
-    //////////////////////////////////////////////////////////////////////////////////////
+    //add resource to the hw_list
+    tHW->edit_caches().add_resource( entry );
   }
   rep->addstr("NX-UPDATE: OK");
   return 0;
@@ -422,8 +398,6 @@ int resmgr_frontend::_res_hwupdate_(zmq::multipart_t * req, zmq::multipart_t  * 
 int resmgr_frontend::_res_nxinitjob_(zmq::multipart_t * req, zmq::multipart_t  * rep)
 {
   zmsg_viewer<> msgv(*req);
-  std::set< sfunce * > funcset;
-  get_allFuncPtr( funcset );
   
   //1 = from app, 0= from nexus
   bool from_app       = *msgv.get_section<bool>(0).begin(); // is it from the application or nex
@@ -617,49 +591,6 @@ int resmgr_frontend::_res_nxuptcache_(zmq::multipart_t * req, zmq::multipart_t *
   return 0;
 }
 
-int resmgr_frontend::get_allFuncPtr(std::set< sfunce *>& funcset)
-{ 
-
-  std::vector< std::list<sfunce> * > funcPtrSet;
-  //get all function vectors flattened
-  funcPtrSet = _get_allFuncVPtr( );
-  //go through each vector
-  for( auto& func_list : funcPtrSet)
-  {
-    //go through each function on each vector
-    for(auto& sfunc : *func_list)
-    {
-      funcset.insert(&sfunc);
-    }  
-  }
-  return 0;
-}
-
-
-std::vector< std::list<sfunce>* > 
-resmgr_frontend::_get_allFuncVPtr( )
-{
-  //TBD REALIGN ALL THE PARENT PTR!!!!
-  std::vector< std::list<sfunce>* > temp;
-  //go through all the pico services
-  for( auto& pico_serv : hw_list)
-  {
-    //go through all the hw devices
-    for( auto& hw_el : pico_serv.hw_elements)
-    {
-      //reset parent address
-      //go through all the sw_interfaces
-      for(auto& sw_el : hw_el.sw_elements)
-      {
-        //go through all the functions and realign parent ptr
-        temp.push_back(&(sw_el.func_elements) );
-      }
-    }
-  }
-
-  return temp;
-}
-
 nex_cache_ptr& resmgr_frontend::_find_create_nexcache( std::string rem_addr, bool& bFound)
 {
   bFound = false;
@@ -730,32 +661,14 @@ function_entry resmgr_frontend::_generate_func_entry(std::string res, std::strin
 
 std::list<std::string> resmgr_frontend::_get_nex_cache_data()
 {
-
-  std::set< sfunce * > funcset;
-  get_allFuncPtr( funcset );
-  std::list<std::string> ltemp;
-
-  //add the list of hw_support resources without 
-  //any local software supporta
-  for(auto& hw : hw_list )
-    for(auto& hw_itm : hw.hw_elements)
-      if( hw_itm.sw_elements.size() == 0 )
-        ltemp.push_back( hw_itm.hw_vendor_desc.first + ":" +
-                         hw_itm.hw_vendor_desc.second + ":" +
-                         hw_itm.hw_sub_vendor_desc.first + ":" + 
-                         hw_itm.hw_sub_vendor_desc.second + ":" +
-                         "*:*:*:*" + std::to_string(hw_itm.hw_state) ); 
-                              
-  //add the list of local available software
-  //with or without local hw support
-  for(auto& func : funcset)
-  {
-    std::string func_id;
-    func->get_full_funcId( func_id );   
-    ltemp.push_back(func_id);
-  }
-
-  return ltemp;
+  std::list<std::string> out;
+  auto tHW = std::for_each(hw_list.begin(), hw_list.end(), 
+                           [&](const auto& hwt)
+             {
+               auto res_list = hwt.get_caches().dump_manifest();
+               out.insert(out.end(), res_list.begin(), res_list.end() );
+             } );
+  return out;
 }
 nex_cache_ptr& resmgr_frontend::_find_nex_cache_by_hostname(std::string hostname)
 {

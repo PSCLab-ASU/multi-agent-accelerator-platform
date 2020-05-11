@@ -47,7 +47,6 @@ void basic_services::operator()( ulong tid )
 {
   pico_return p_ret;  
 
-  //std::cout << "recieved message : " << tid << std::endl;  
   auto method_id = _pktgen->get_method_from_tid(tid);
 
   if( method_id.first != pico_utils::pico_ctrl::sys_shutdown)
@@ -77,7 +76,9 @@ pico_return basic_services::_send_data( const ulong& tid)
   if( direction )
   { 
     if( _main_io_queue.second )
+    {
       (*_main_io_queue.second)->push( tid );
+    }
     else
       std::cout <<"Queue unavailable..." << std::endl;
   }

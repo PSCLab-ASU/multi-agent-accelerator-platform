@@ -12,7 +12,9 @@
 
 class anode_manager
 {
+
   public:
+    enum recommendation_strat { round_robin };
 
     anode_manager( ) {}; 
                    //home nex   remote nex
@@ -44,6 +46,12 @@ class anode_manager
   private:
 
     bool  _node_exists( ulong );
+
+    std::optional<ulong> 
+    _recommend_node( recommendation_strat, 
+                    std::string, std::string, 
+                    const std::map<std::string, std::string>& );      
+
     ulong _recommend_accel(std::string, std::map<std::string, std::string> );
 
 

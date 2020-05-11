@@ -24,10 +24,10 @@ device_manager::device_manager()
 
   //device manager should check if hw existsa
   //and add the * fid if hardware exists
-  _add_kernel( "*",       &device_manager::_pw_add   ); 
-  _add_kernel( "12345",   &device_manager::_pw_add   );
-  _add_kernel( "123456",  &device_manager::_pw_mult  );
-  _add_kernel( "1234567", &device_manager::_pw_div   );
+  _add_kernel( "*",          &device_manager::_pw_add   ); 
+  _add_kernel( "12345678",   &device_manager::_pw_add   );
+  _add_kernel( "123456789",  &device_manager::_pw_mult  );
+  _add_kernel( "123456789A", &device_manager::_pw_div   );
 
 }
 

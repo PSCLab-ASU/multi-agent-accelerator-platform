@@ -32,3 +32,13 @@ const std::vector<std::string> base_device_manager::get_valid_file_exts() const
   return {};
 }
 
+void base_device_manager::add_kernel_desc( std::string res)
+{
+  _cache.add_resource( res );
+}
+
+std::list<std::string> base_device_manager::get_manifest() const 
+{
+  auto out = _cache.dump_manifest();
+  return out;
+}

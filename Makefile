@@ -23,7 +23,7 @@ CC.clang  := /bin/clang
 LD.clang  := /bin/clang++
 AR.clang  := /bin/ar
 
-CXXFLAGS.gcc.debug := -Og -fstack-protector-all
+CXXFLAGS.gcc.debug := -O0 -g -fstack-protector-all
 CXXFLAGS.gcc.release := -O3 -march=native -DNDEBUG
 CXXFLAGS.gcc := -pthread -std=c++2a -fconcepts-ts -fPIC -Wno-return-type -Wno-return-local-addr ${CXXFLAGS.gcc.${BUILD}}
 
@@ -56,8 +56,15 @@ LINK.A = ${AR} rsc $@ $(filter-out Makefile,$^)
 all : create_build_dir utils \
                        bridge_agent \
                        accelerator_agent \
+		       accelerator_agent.ctrl.bin \
                        runtime_agent \
                        virtualization_agent # Build all exectuables.
+
+core : create_build_dir utils \
+                        bridge_agent \
+                        accelerator_agent \
+		        accelerator_agent.ctrl.bin \
+                        runtime_agent
 
 add_util_objs            = $(wildcard $(build_dir)/utils/src/* )
 add_agent_dependencies  := $$(patsubst $(CURDIR)%.cc, $(build_dir)%.o, $$(wildcard $(CURDIR)/$$@/src/* ) )
@@ -75,6 +82,7 @@ accelerator_agent : AGENT_API_DIRS = $(CURDIR)/bridge_agent/api/src/* \
 #first level agent compiling
 accelerator_agent : utils $(add_api_dependencies) $(add_agent_dependencies) 
 	$(LINK.EXE) $(add_util_objs)
+
 ###########################################################################################
 
 ###########################################################################################
@@ -109,9 +117,10 @@ $(PICO_MK_DIRS) : export DEPENDS := $(CURDIR)/ \
                                     $(CURDIR)/virtualization_agent/common/api/ \
                                     $(CURDIR)/virtualization_agent/common/ \
                                     $(CURDIR)/utils/
-$(PICO_MK_DIRS) : 
-	$(MAKE) -C $@ all PMAIN=$@
+$(PICO_MK_DIRS) :
+	@$(MAKE) -C $@ all PMAIN=$@
                          
+#####################################################################################
 #####################################################################################
 
 #####################################################################################
@@ -120,16 +129,22 @@ $(PICO_MK_DIRS) :
 # General rules sections for all targets
 #second level object generation
 $(build_dir)%.o : $(CURDIR)%.cc $$(substr src, include, $(CURDIR)/%.h)
-	$(COMPILE.CXX)
+	echo Compiling $@...
+	@$(COMPILE.CXX)
+
+#generate objects for ctrl
+%.ctrl : $$(subst .cc,.o, $$(addprefix $(build_dir)/, $$(wildcard %/ctrl/src/* ) )) \
+         $$(wildcard %/ctrl/include/* )
+	$(LINK.EXE) $(add_util_objs) 
 
 # Create the build directory and sub dirs on demand.
 create_build_dir : ${build_dir} ${OUTPUT_DIRS}
 
 ${build_dir} ${OUTPUT_DIRS} : 
-	mkdir -p $@
+	@mkdir -p $@
 
 clean:
-	rm -rf ${build_dir}
+	@rm -rf ${build_dir}
 
 .PHONY : clean all virtualization_agent $(PICO_MK_DIRS)
 

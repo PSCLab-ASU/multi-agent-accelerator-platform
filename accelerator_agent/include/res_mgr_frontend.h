@@ -69,7 +69,6 @@ class resmgr_frontend
 
     int set_zmq_context  (zmq::context_t *);
     int complete_request();
-    int get_allFuncPtr( std::set< sfunce * > & );
 
   private:
     //private functions
@@ -82,8 +81,6 @@ class resmgr_frontend
     nex_cache_ptr& _find_create_nexcache( std::string, bool& );
     //find or create entry in the job_registry by jobId
     job_interface_ptr& _find_create_jobinterface( std::string, bool& );
-
-    std::vector< std::list<sfunce>* > _get_allFuncVPtr( );
 
     void _internal_name(std::string &);
 
@@ -139,6 +136,7 @@ class resmgr_frontend
     //local zmq socket
     zmq::socket_t * hw_entry;
     zmq::socket_t * hw_broadcast;
-};
+
+}; 
 
 #endif

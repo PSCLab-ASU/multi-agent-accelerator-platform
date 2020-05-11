@@ -16,8 +16,8 @@ int main(const int argc, const char * argv[] )
     std::string address = std::string("ipc:///") + port;
     std::string pub_address = std::string("ipc:///") + pub;
     std::string ext_address = std::string("tcp://*:") + ext;
-    ocl_sock.setsockopt(ZMQ_IDENTITY, "ocl_drv", 7);
-    pub_sock.setsockopt(ZMQ_IDENTITY, "ocl_drv", 7);
+    //ocl_sock.setsockopt(ZMQ_IDENTITY, z_identity, 8);
+    //pub_sock.setsockopt(ZMQ_IDENTITY, z_identity, 8);
     pub_sock.setsockopt(ZMQ_SUBSCRIBE, "", 0);
 
     //address needs to be put in the manifest

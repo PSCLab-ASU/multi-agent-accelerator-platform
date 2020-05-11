@@ -3,6 +3,7 @@
 #include <mpi_computeobj.h>
 #include <mpi_proc_utils.h>
 #include <mpi.h>
+#include <atomic>
 
 #ifndef MPIPROC_IMPL
 #define MPIPROC_IMPL
@@ -74,6 +75,7 @@ class mpi_proc_impl : public mpi_pv_interface
     const int _rank_zero = 0;
     int   _system_tag;
     int   _is_mpi_initialized;
+    std::atomic_bool _atomic_mpi_initialized=false;
     mpi_proc_utils::rank_zero_vars zrglobals;
     
     //mailbox to cross threading domain

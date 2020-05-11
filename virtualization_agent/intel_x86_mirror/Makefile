@@ -2,7 +2,7 @@
 .RECIPEPREFIX =
 .SECONDEXPANSION:
 
-BINARY_NAME ?= intel_x86
+BINARY_NAME ?= intel_x86_mirror
 DEPENDS     ?= ${CURDIR}
 PMAIN       ?= $(CURDIR) 
 DEST        := $(PMAIN)$(BUILD)
@@ -52,7 +52,7 @@ aa_api       : $$(patsubst $(aa_api)%.cc,      $(DEST)/accelerator_agent/api/%.o
 va_api       : $$(patsubst $(va_api)%.cc,      $(DEST)/virtualization_agent/common/api/%.o, $$(wildcard $(va_api)src/*    ) ) 
 va_common    : $$(patsubst $(va_common)%.cc,   $(DEST)/virtualization_agent/common/%.o,     $$(wildcard $(va_common)src/* ) ) 
 va_main      : $$(patsubst $(PMAIN)/%.cc,      $(DEST)/virtualization_agent/%.o,            $$(wildcard $(PMAIN)/src/*    ) ) 
-	@echo Linking pico services for $(BINARY_NAME)... 
+	@echo Linking pico services for $(BINARY_NAME)...
 	$(LINK.EXE)
 ###############################################################################################################
 #Object build rules
@@ -71,7 +71,7 @@ $(DEST)/virtualization_agent/common/api/%.o : $(va_api)src/*.cc $(va_api)include
 $(DEST)/virtualization_agent/common/src/%.o : $(va_common)src/%.cc $(wildcard $(va_common)include/%.h)
 	@echo Compiling $@ ...
 	@$(COMPILE.CXX) -I$(utils_)include -I$(aa_api)include \
-                        -I$(va_api)include -I$(va_common)include/ -I$(PMAIN)include/ 
+                       -I$(va_api)include -I$(va_common)include/ -I$(PMAIN)include/ 
 
 $(DEST)/virtualization_agent/src/%.o : $(PMAIN)src/*.cc $(PMAIN)include/*.h
 	@echo Compiling $@ ...

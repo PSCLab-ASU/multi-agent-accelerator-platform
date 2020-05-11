@@ -5,7 +5,7 @@
 #include "resource_logic.h"
 #include "payload_details.h"
 #include "execution_engine.h"
-
+#include "ncache_registry.h"
 
 #ifndef BASEDEVMGR
 #define BASEDEVMGR
@@ -41,7 +41,13 @@ class base_device_manager : public execution_engine<base_device_manager_ees, 64>
 
     const std::vector<std::string> get_valid_file_exts() const;
 
+    void add_kernel_desc( std::string );
+
+    std::list<std::string> get_manifest() const;
+
   private:
+
+    ncache_registry _cache;
 
 };
 

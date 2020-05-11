@@ -122,13 +122,12 @@ collage::_action_ctrl( std::string method_str )
 template< ushort stage = 0>
 pico_return collage::_send_downstream( auto& req  )
 {
+  using namespace std::chrono_literals;
   pico_return pret{}; 
-
   auto& q       = _req_qs[stage];
   ulong tid     = req->get_self_tid();
   
   q->push( tid ); 
-
   return pret;
 }
 
@@ -391,11 +390,17 @@ pico_return collage::_col_reg_resource_resp( PICO_OUT_TYPE ) // tid, zmq::multip
     //auto [requester, job_id, rank_id] = header.get_zheader();
     std::string key  = header.get_key();
     auto raw_data = payload.get_data();
+    auto ext_addr = raw_data[0];
+    //remove the ext address from the list
+    raw_data.erase(raw_data.begin());
     
     auto mbuilder = nexus_utils::start_request_message( nexus_utils::nexus_ctrl::hw_reg, key);
 
-    mbuilder.add_arbitrary_data( raw_data[0] )
-            .add_arbitrary_data( raw_data[1] )
+    std::list<std::string> ll;
+    ll.insert(ll.begin(), raw_data.begin(), raw_data.end() );
+
+    mbuilder.add_arbitrary_data( ext_addr )
+            .add_sections( ll )
             .finalize();
 
     resp = std::move(mbuilder.get_zmsg() );

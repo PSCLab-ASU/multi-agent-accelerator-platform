@@ -33,8 +33,6 @@ enum struct valid_function_header{
 
 using vfh = valid_function_header;
 const std::map<valid_function_header, std::string> g_func_map {
-  {vfh::FUNC_ALIAS, "func_alias"   }, 
-  {vfh::REPLICA,    "func_repl"    },
   {vfh::HW_VID,     "hw_vid"       }, 
   {vfh::HW_PID,     "hw_pid"       },
   {vfh::HW_SS_VID,  "hw_ss_vid"    }, 
@@ -44,6 +42,8 @@ const std::map<valid_function_header, std::string> g_func_map {
   {vfh::SW_FID,     "sw_fid"       }, 
   {vfh::SW_CLID,    "sw_clid"      }, 
   {vfh::SW_VERID,   "sw_verid"     },
+  {vfh::FUNC_ALIAS, "func_alias"   }, 
+  {vfh::REPLICA,    "func_repl"    },
   {vfh::PLAT_CFG,   "platform_id"  }
 };
 ///////////////////////////////////////////////////////////////////

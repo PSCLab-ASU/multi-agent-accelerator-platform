@@ -1,6 +1,8 @@
 #include <anode_manager.h>
 #include <type_traits>
-#include <boost/range/algorithm/for_each.hpp>
+//#include <boost/range/algorithm/for_each.hpp>
+#include <boost/range/algorithm.hpp>
+
 #ifndef ANODEMAN
 #define ANODEMAN
 
@@ -107,22 +109,56 @@ void anode_manager::remove_anodes( std::vector<std::string> rnexs )
 
 }
 
+//template <recommendation_strat strat> TBD
+std::optional<ulong>
+anode_manager::_recommend_node( recommendation_strat strat, 
+                                std::string key, std::string claim_request, 
+                                const std::map<std::string, std::string>& claim_ovr )      
+{
+  std::vector< std::pair<ulong, ulong> > node_congestion_table;
+  //1) get a list of candidate nodes
+
+  auto num_nodes = _remote_anodes.size();
+
+  for(auto i : std::ranges::views::iota((size_t) 0, num_nodes))
+  {
+    anode& an = _remote_anodes[i];
+    bool supported = an.can_completely_support( claim_request );
+
+    if( supported ) 
+      node_congestion_table.emplace_back(i, an.get_outstanding_msg_cnt() ); 
+
+  }
+
+  boost::sort( node_congestion_table, [](auto lhs, auto rhs){ return lhs.second < rhs.second; });
+  if( node_congestion_table.empty() )
+  {
+    std::cout << "No Support for : " << claim_request << std::endl;
+    return {};
+  }
+  else return node_congestion_table[0].first;
+}
+
+
 int anode_manager::make_claim( const std::string& AccId, 
                                const std::string& claim_req, 
                                const std::map<std::string, std::string>& claim_ovr )
 {
-  ulong nsize  = _remote_anodes.size();
-  ulong nodeId = (_last_nex++ % nsize); //zero is home nexa
+  //get all candidate nodes
+  auto nodeId = _recommend_node( recommendation_strat::round_robin, 
+                                 AccId, claim_req, claim_ovr);   
 
-  //nodeId = _recommend_accel( claim_req, claim_ovr );
-  if( nodeId < _remote_anodes.size() )
+  if( nodeId && nodeId.value() < _remote_anodes.size() )
   {
-    std::cout << "Recommending : " << nodeId << " for "<< claim_req << std::endl;
-    _remote_anodes[nodeId].make_claim( AccId, claim_req, claim_ovr);
+    std::cout << "Recommending : " << nodeId.value() << " for "<< claim_req << std::endl;
+    _remote_anodes[nodeId.value()].make_claim( AccId, claim_req, claim_ovr);
+    return 0;
   }
-  else  std::cout << "Recommendation out of bounds..." << std::endl;
-
-  return 0;
+  else  
+  {
+    std::cout << "Recommendation out of bounds or cannot be fullfilled..." << std::endl;
+    return -1;
+  }
 }
                  
 

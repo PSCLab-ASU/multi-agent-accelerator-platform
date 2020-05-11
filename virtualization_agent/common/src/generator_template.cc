@@ -130,7 +130,6 @@ bool persistent_generator<Ts...>::try_remove(ulong tid)
     //skip removal
     if( entry->get_refcount() ==0 );
     else return; //hopefully breaks out of the visit
-
     //if refcount is equal to zero remove dependence
     std::optional<ulong> pred = entry->get_predecesor_tid();
     //run through the chain of dependend pkts

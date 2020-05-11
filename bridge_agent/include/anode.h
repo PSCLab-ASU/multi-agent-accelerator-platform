@@ -76,8 +76,8 @@ class anode
     boost::upgrade_mutex&& move_mutex()
     { return std::move(_mu); }
 
-    ncache_registry&& move_nxcache()
-    { return std::move(_nxcache); }
+    ncache_registry&& move_ncache()
+    { return std::move(_ncache); }
 
     std::vector<std::string>&& move_claim_history()
     { return std::move(_claim_history); }
@@ -86,11 +86,19 @@ class anode
     void deactivate() { _bActive = false; }
  
     void set_nxcache_entries( const std::list<std::string>& );
-   
+
+    bool can_completely_support( std::string resource ) const;
+
+    bool can_support( std::pair<std::string, std::string> ,
+                      std::optional<
+                        std::pair<std::string, std::string> > ) const;
+    size_t get_outstanding_msg_cnt() const;
+
   private:
 
     bool                  _node_exists; //true if ping returned
     bool                  _bActive;     //true if post_init occured
+    size_t                _outstanding_msg_cnt=0;
     std::string           _job_id;
     std::string           _nexus_address;
     std::string           _tx_id; //this is the id for this socket
@@ -100,7 +108,7 @@ class anode
     boost::upgrade_mutex  _mu;
 
     //holds the reousrces from the nexus
-    ncache_registry       _nxcache;
+    ncache_registry       _ncache;
     //        rank   acceleratorId
     std::vector< std::string > _claim_history;
    

@@ -4,3 +4,4 @@ libmpix.so
 accelerator_agent.bin
 bridge_agent.bin
 virtualization_agent/intel_x86/debug/
+unit_test/libmpix.so

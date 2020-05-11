@@ -207,6 +207,23 @@ void print_types()
 
 }
 
+//TBD: Need to add concepts to protect types
+//     Check if map has a first and secon
+//     Check if val and map.second have a equality operator
+//Carefull, each entry val must be unique
+auto reverse_map_find( auto& base_map, auto val )
+{
+  for( auto& entry : base_map ) 
+  {
+    if( entry.second == val )
+    {
+      return entry.first;
+    }
+  } 
+
+}
+
+
 std::string generate_random_str();
 
 

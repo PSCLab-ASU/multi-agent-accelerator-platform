@@ -78,7 +78,7 @@ mpi_proc_impl::action_func mpi_proc_impl::action_ctrl( mpi_proc_utils::mpi_proc_
 void mpi_proc_impl::init_thread_components()
 {
   std::cout << "init_thread_components... " << std::endl;
-  while( _is_mpi_initialized );
+  while( !_atomic_mpi_initialized.load() );
 }
 
 void mpi_proc_impl::system_update()
@@ -198,7 +198,9 @@ mpi_return mpi_proc_impl::operator()(std::integral_constant<api_tags, mpi_init>,
     //set initial rank value for child ranks
     zrglobals.init_rank(_world_size);
   }
-
+ 
+  //hold MPI thread until the MPI runtime is intialized
+  _atomic_mpi_initialized.store( true );
   return mpi_return{};
 }
 mpi_return mpi_proc_impl::operator()(std::integral_constant<api_tags, mpi_finalize>, metadata& md)
@@ -368,5 +370,6 @@ void mpi_proc_impl::_wait_for_message(Ts... parms)
   _mix_cv->wait( _mix_lk );  
 
 }
+
 
 template void mpi_proc_impl::_wait_for_message<int, int>( int, int );

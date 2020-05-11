@@ -240,12 +240,19 @@ pico_return device_services::_register_resource_req( ulong tid )
   auto& dev_resp = get_pktgen()->opt_generate<ulong, device_response_ll>(tid);
   std::vector<std::string> dev_desc;
   //retrieve filter settings
-  std::string filt     = get_pcfg()->get_filters();
+  auto manifest =  dm->get_manifest();
   std::string ext_addr = get_pcfg()->get_external_address();
+  manifest.push_front( ext_addr );
   //construct registration data
-  misc_string_payload data({ext_addr, filt});
+  std::vector<std::string> v_cache;
+  v_cache.insert( v_cache.begin(), manifest.begin(), manifest.end() );
+
+  misc_string_payload data( v_cache );
 
   dev_resp->set_data( data );
+  std::cout << "Fetching Id..." << tid << std::endl;
+  auto id = dev_resp->get_self_tid();
+  std::cout << "Sending data upstream..." << std::endl;
   send_upstream( dev_resp->get_self_tid() );
   return pico_return{};
 }

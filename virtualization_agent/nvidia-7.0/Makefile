@@ -2,7 +2,7 @@
 .RECIPEPREFIX =
 .SECONDEXPANSION:
 
-BINARY_NAME ?= intel_x86
+BINARY_NAME ?= nvidia7.0
 DEPENDS     ?= ${CURDIR}
 PMAIN       ?= $(CURDIR) 
 DEST        := $(PMAIN)$(BUILD)
@@ -16,7 +16,7 @@ utils_      := $(strip $(word 5, $(DEPENDS) ) )
 COMPILER=gcc
 CXX.gcc := gcc
 CC.gcc  := gcc
-LD.gcc  := gcc
+LD.gcc  := /usr/local/cuda-7.0/bin/nvcc
 AR.gcc  := ar
 
 #Pico Service only works with -O0, NEED TO Fix for -O3
@@ -31,7 +31,7 @@ CC       := ${CC.${COMPILER}}
 LD       := ${LD.${COMPILER}}
 AR       := ${AR.${COMPILER}}
 
-LDFLAGS.common  := -lstdc++ -lzmq -lpthread -lzmq -lboost_system -lboost_thread -lboost_iostreams
+LDFLAGS.common  := -lstdc++ -lzmq -lpthread -lzmq -lboost_system -lboost_thread -lboost_iostreams -arch sm_20
 LDFLAGS.debug   := $(LDFLAGS.common)
 LDFLAGS.release := $(LDFLAGS.common)
 LDFLAGS         := ${LDFLAGS.${BUILD}}
@@ -44,15 +44,26 @@ COMPILE2.CXX = ${CXX} -c $(patsubst $(DEST)/virtualization_agent/%.o, $(PMAIN)%.
 LINK.EXE = ${LD} $(shell find $(DEST) -name '*.o') -o $(DEST)/bin/$(BINARY_NAME) $(LDFLAGS) $(LDLIBS)
 ##############################################################################################################
 #main entry point
-all : create_build_dir utils_common aa_api va_api va_common va_main # Build all exectuables.
+ifneq (, $(shell which ${LD.gcc} ))
+  all_target := create_build_dir utils_common aa_api va_api va_common va_cuda va_main # Build all exectuables.
+else
+#  all_target := $(warning bypassing virtualization agent for $(BINARY_NAME))bypass # Build all exectuables.
+  all_target := bypass # Build all exectuables.
+endif
+
+all : $(all_target) #Build all exectuables
+
+bypass :
+	@echo Bypassing Makefile for $(BINARY_NAME)...
 
 ###############################################################################################################
-utils_common : $$(patsubst $(utils_)%.cc,      $(DEST)/utils/%.o,                           $$(wildcard $(utils_)src/*    ) )
-aa_api       : $$(patsubst $(aa_api)%.cc,      $(DEST)/accelerator_agent/api/%.o,           $$(wildcard $(aa_api)src/*    ) ) 
-va_api       : $$(patsubst $(va_api)%.cc,      $(DEST)/virtualization_agent/common/api/%.o, $$(wildcard $(va_api)src/*    ) ) 
-va_common    : $$(patsubst $(va_common)%.cc,   $(DEST)/virtualization_agent/common/%.o,     $$(wildcard $(va_common)src/* ) ) 
-va_main      : $$(patsubst $(PMAIN)/%.cc,      $(DEST)/virtualization_agent/%.o,            $$(wildcard $(PMAIN)/src/*    ) ) 
-	@echo Linking pico services for $(BINARY_NAME)... 
+utils_common : $$(patsubst $(utils_)%.cc,      $(DEST)/utils/%.o,                           $$(wildcard $(utils_)src/*      ) )
+aa_api       : $$(patsubst $(aa_api)%.cc,      $(DEST)/accelerator_agent/api/%.o,           $$(wildcard $(aa_api)src/*      ) ) 
+va_api       : $$(patsubst $(va_api)%.cc,      $(DEST)/virtualization_agent/common/api/%.o, $$(wildcard $(va_api)src/*      ) ) 
+va_common    : $$(patsubst $(va_common)%.cc,   $(DEST)/virtualization_agent/common/%.o,     $$(wildcard $(va_common)src/*   ) ) 
+va_cuda      : $$(patsubst $(PMAIN)/%.cu,      $(DEST)/virtualization_agent/%.o,            $$(wildcard $(PMAIN)/src/cuda/* ) ) 
+va_main      : $$(patsubst $(PMAIN)/%.cc,      $(DEST)/virtualization_agent/%.o,            $$(wildcard $(PMAIN)/src/*      ) ) 
+	@echo Linking pico services for $(BINARY_NAME)...
 	$(LINK.EXE)
 ###############################################################################################################
 #Object build rules
@@ -73,9 +84,14 @@ $(DEST)/virtualization_agent/common/src/%.o : $(va_common)src/%.cc $(wildcard $(
 	@$(COMPILE.CXX) -I$(utils_)include -I$(aa_api)include \
                         -I$(va_api)include -I$(va_common)include/ -I$(PMAIN)include/ 
 
-$(DEST)/virtualization_agent/src/%.o : $(PMAIN)src/*.cc $(PMAIN)include/*.h
+$(DEST)/virtualization_agent/src/cuda/%.o : $(PMAIN)src/cuda/*.cu $(PMAIN)include/cuda/*.h
+	@echo Compiling ---CUDA--- $@ ...
+	@/usr/local/cuda-7.0/bin/nvcc -arch sm_20 -o $@ -c $(filter-out %.h,$^) $(addprefix -I, $(sort $(dir $(filter %.h, $^))))
+
+$(DEST)/virtualization_agent/src/%.o : $(PMAIN)src/*.cc $(PMAIN)include/*.h $(PMAIN)include/cuda/*.h
 	@echo Compiling $@ ...
-	@$(COMPILE2.CXX) -I$(utils_)include -I$(aa_api)include -I$(va_api)include -I$(va_common)include/ 
+	@$(COMPILE2.CXX) -I$(utils_)include -I$(aa_api)include -I$(va_api)include -I$(va_common)include/
+
 
 # Create the build directory and sub dirs on demand.
 create_build_dir : ${DEST}
@@ -86,6 +102,7 @@ ${DEST} :
 	@mkdir -p $@/utils/src/
 	@mkdir -p $@/accelerator_agent/api/src/
 	@mkdir -p $@/virtualization_agent/src/
+	@mkdir -p $@/virtualization_agent/src/cuda
 	@mkdir -p $@/virtualization_agent/common/api/src/
 	@mkdir -p $@/virtualization_agent/common/src/
 
@@ -93,7 +110,7 @@ clean:
 	@rm -rf ${DEST}
 
 #.PHONY : clean all create_build_dir aa_api va_api va_common va_main utils_common
-.PHONY : clean all
+.PHONY : clean all bypass
 
 
 # ==== End rest of boilerplate

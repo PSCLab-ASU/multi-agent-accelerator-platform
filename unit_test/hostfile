@@ -1,8 +1,8 @@
 {
   "host_list" : [],
 				 
-  "func_list" : [{"func_alias" : "VEC_ARITH", "func_repl":"1" , "platform_id" : "rr_scat","sw_fid" : "12345" }, 
-                 {"func_alias" : "conv2", "platform_id" : "rr_scat"},
+  "func_list" : [{"func_alias" : "VEC_ADD",  "func_repl":"1" , "platform_id" : "rr_scat","sw_fid" : "12345" }, 
+                 {"func_alias" : "VEC_MULT", "sw_fid" : "123456789", "platform_id" : "rr_scat"},
 		 {"func_alias" : "conv3", "platform_id" : "rr_scat"},
 		 {"func_alias" : "conv4", "platform_id" : "rr_scat"},
 		 {"func_alias" : "conv5", "platform_id" : "rr_scat"}],
