@@ -129,7 +129,7 @@ $(PICO_MK_DIRS) :
 # General rules sections for all targets
 #second level object generation
 $(build_dir)%.o : $(CURDIR)%.cc $$(substr src, include, $(CURDIR)/%.h)
-	echo Compiling $@...
+	@echo Compiling $(notdir $@)...
 	@$(COMPILE.CXX)
 
 #generate objects for ctrl
