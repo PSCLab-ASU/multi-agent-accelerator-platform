@@ -74,6 +74,7 @@ class resmgr_frontend
     //private functions
     //purpose of this function is to send out P2P connection
     //requests
+    std::string _recommend_va( std::string );
     int _respond_with_manifest( accel_utils::accel_ctrl, zmq::multipart_t * );
     int _init_remote_conn( std::string, std::string, std::vector<std::string> &);
     int _build_nex_conn( zmq::multipart_t &);

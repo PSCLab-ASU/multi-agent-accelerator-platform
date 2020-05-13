@@ -131,6 +131,8 @@ anode_manager::_recommend_node( recommendation_strat strat,
   }
 
   boost::sort( node_congestion_table, [](auto lhs, auto rhs){ return lhs.second < rhs.second; });
+  boost::for_each( node_congestion_table, 
+   [](auto item) {std::cout << "Recommend : "<< item.first<< ", " << item.second<< std::endl; });
   if( node_congestion_table.empty() )
   {
     std::cout << "No Support for : " << claim_request << std::endl;

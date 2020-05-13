@@ -94,6 +94,7 @@ int anode::make_claim( const std::string& key,  const std::string& claim, const 
   zb.finalize();
   //send claim  
   send( zb.get_zmsg() );
+  _outstanding_msg_cnt++;
 
   return 0;
 }
@@ -103,7 +104,6 @@ int anode::send( zmq::multipart_t& msg )
   msg.send( _zsock );
   //some messages dont need a response
   //BIG HACK HACK HACK!!!
-  _outstanding_msg_cnt++;
  
   return 0;
 }
@@ -118,7 +118,6 @@ std::optional<zmq::multipart_t> anode::try_recv( )
   omsg = std::move( mp );
   //HACK HACK HACK HACK : Need to figure out
   //the correct way to decrement count
-  if( !mp.empty() ) _outstanding_msg_cnt--;
   
   return std::move(omsg);
 }

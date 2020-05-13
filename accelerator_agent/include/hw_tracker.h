@@ -25,7 +25,23 @@ class hw_tracker {
   //each struct points to a nexus addr : zmq_identifier
   std::string id;
   std::string addr;
+
+  //get id
+  std::string get_id() const
+  {
+    return id;
+  }
   
+  ulong get_congestion() const
+  {
+    return _congestion;
+  }
+
+  bool can_support( std::string claim) const
+  {
+    return _caches.can_completely_support( claim ); 
+  }
+
   //mthods for hw_tracker
   int request_rank(std::string, std::string,               
                    std::tuple<ulong, ulong, std::string>,
@@ -42,6 +58,7 @@ class hw_tracker {
     std::shared_ptr<zmq::context_t> _ctx;
     std::shared_ptr<zmq::socket_t>  _zlink;
     ncache_registry  _caches;
+    ulong _congestion;
 };
 
 #endif

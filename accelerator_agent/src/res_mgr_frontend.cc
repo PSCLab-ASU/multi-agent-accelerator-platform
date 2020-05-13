@@ -3,6 +3,7 @@
 #include <zmsg_builder.h>
 #include <config_components.h>
 #include <pico_utils.h>
+#include <boost/range/algorithm.hpp>
 
 #define BIND_ACTION(action)            \
   std::bind(&resmgr_frontend::action,\
@@ -471,11 +472,38 @@ int resmgr_frontend::_res_nxconn_(zmq::multipart_t * req, zmq::multipart_t  * re
   return 0;
 }
 
+std::string resmgr_frontend::_recommend_va( std::string claim )
+{
+  //create candidate list
+  std::vector<
+    std::pair<std::string, ulong> > cand_list;
+
+  ////////////////////////////////////////////////
+  boost::for_each( hw_list, [&]( auto candidate ) 
+  {
+    if( candidate.can_support( claim ) )
+    {
+      auto addr = candidate.get_id();
+      auto cong = candidate.get_congestion();
+      cand_list.emplace_back( addr, cong );   
+    }
+ 
+  } );
+  ///////////////////////////////////////////////
+  boost::sort( cand_list, [](auto lhs, auto rhs){ return lhs.second < rhs.second; });
+  if( cand_list.empty() ) std::cout << "Could not find virtualization agent" << std::endl;
+  else
+  {
+    std::cout << "Found Virtualization Agent : "<< cand_list[0].first << std::endl;
+    return cand_list[0].first;
+  }
+
+}
+
 int resmgr_frontend::_res_nxsnddata_(zmq::multipart_t * req, zmq::multipart_t  * rep)
 {
   std::cout << "entering : " << __func__ << std::endl;
   auto& pmr = _pending_msgs_reg;
-  auto pico_address = hw_list.front().id; //HARD coded
 
   zmsg_viewer<> zmsgv(*req);
 
@@ -483,6 +511,7 @@ int resmgr_frontend::_res_nxsnddata_(zmq::multipart_t * req, zmq::multipart_t  *
   std::string resource_key = current_req_addr + AccId;
   auto resource_str = _claim_registry.at(resource_key);
 
+  auto pico_address = _recommend_va( resource_str );
   auto pmethod = pico_utils::pico_rolodex.at(pico_utils::pico_ctrl::send);
   auto key    = generate_random_str();
   //register pending message

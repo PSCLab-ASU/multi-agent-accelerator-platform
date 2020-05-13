@@ -236,8 +236,10 @@ mpi_return mpi_accel_impl::accel_send(int dst, std::string claimId, const MPI_Co
     //add number of args
     zmsgb.add_arbitrary_data((ulong) nargs);
 
+    std::cout << "Adding memory blocks " << std::endl;
     for(int i =0; i < nargs; i++)
-    {   
+    {  
+      std::cout << i<<") Adding memory blocks " << std::endl;
       auto[b_signed, b_type] = g_mpi_type_conv.at(types[i]);
       MPI_Type_size(types[i], &type_size);
       zmsgb.add_memblk(b_signed, b_type, type_size, 
@@ -247,11 +249,16 @@ mpi_return mpi_accel_impl::accel_send(int dst, std::string claimId, const MPI_Co
     zmsgb.finalize();
     /////////////////////////////////////////////////////////
     ///////////adding pending message to registry////////////
+    std::cout << "Adding entry to pmsg registry " << std::endl;
+    std::cout << "key : "<< key << 
+                 ", dst : "<< dst <<
+                 ", tag : "<< tag << std::endl;
     _pmsg_registry.add_send_pmsg( key, dst, tag, 
                                   zmsgb.get_zmsg().clone() );
     /////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////
     //sending message
+    std::cout << "Added entry to pmsg registry " << std::endl;
     _send_zmsg( zmsgb );
 
 

@@ -1,5 +1,5 @@
 {
-  "host_list" : [],
+  "host_list" : [{"host_name" : "nyquist-1.eng.asu.edu", "port" : "8000" }],
 				 
   "func_list" : [{"func_alias" : "VEC_ADD",  "func_repl":"1" , "platform_id" : "rr_scat","sw_fid" : "12345" }, 
                  {"func_alias" : "VEC_MULT", "sw_fid" : "123456789", "platform_id" : "rr_scat"},

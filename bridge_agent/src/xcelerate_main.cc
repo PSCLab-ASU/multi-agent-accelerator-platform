@@ -56,8 +56,7 @@ int main(int argc, char ** argv)
 
   //ROUTER
   int stat = std::system( new_exec_str.c_str() );
-
-  
+ 
   while(!xcelerate_intf.check_stop())
   {
     zmq::multipart_t request;

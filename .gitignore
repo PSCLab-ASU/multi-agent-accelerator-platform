@@ -6,6 +6,8 @@ accelerator_agent.ctrl.bin
 accelerator_agent.bin
 bridge_agent.bin
 virtualization_agent/intel_x86/debug/
+virtualization_agent/intel_x86_mirror/debug/
+virtualization_agent/nvidia-7.0/debug/
 unit_test/libmpix.so
 unit_test/hello_world
 unit_test/.nfs*

@@ -18,36 +18,49 @@ struct mpi_sendrecv_pmsg : _base_pending_msg
   //copy
   mpi_sendrecv_pmsg( const mpi_sendrecv_pmsg& rhs)
   : _base_pending_msg(rhs.get_rid(), rhs.get_kid() )
-  {
-    _bactive = rhs.is_active();
-    _key     = rhs.get_key();
-    _rank    = rhs.get_rank();  
-    _tag     = rhs.get_tag();
-    _ozmsg   = rhs.copy_data();
+  { 
+    try{
+      std::cout << " mpi_sendrecv_pmsg copy ctor" << std::endl;
+      _bactive = rhs.is_active();
+      _key     = rhs.get_key();
+      _rank    = rhs.get_rank();  
+      _tag     = rhs.get_tag();
+      _ozmsg   = rhs.copy_data();
+    }
+    catch(...) { std::cout << "thrown exception from copy mpi_sendrecv_pmsg" << std::endl; }
   }
 
   //move
   mpi_sendrecv_pmsg( mpi_sendrecv_pmsg&& rhs)
   : _base_pending_msg(rhs.get_rid(), rhs.get_kid() )
   {
-    _bactive = rhs.is_active();
-    _key     = rhs.get_key();
-    _rank    = rhs.get_rank();  
-    _tag     = rhs.get_tag();
-    _ozmsg   = rhs.move_data();
-    
+    try{
+      _bactive = rhs.is_active();
+      _key     = rhs.get_key();
+      _rank    = rhs.get_rank();  
+      _tag     = rhs.get_tag();
+      _ozmsg   = rhs.move_data();
+    }
+    catch(...)
+    {
+      std::cout<< "thrown exception from mpi_sendrecv_pmsg" << std::endl;
+    }
   }
   //assignment
   mpi_sendrecv_pmsg& operator=( const mpi_sendrecv_pmsg& rhs)
   { 
-    auto[ kid, rid ] = rhs.get_ids();
-    set_rid( rid );
-    set_kid( kid );
-    _bactive = rhs.is_active();
-    _key     = rhs.get_key();
-    _rank    = rhs.get_rank();  
-    _tag     = rhs.get_tag();
-    _ozmsg   = rhs.copy_data();
+    try{
+      std::cout << " mpi_sendrecv_pmsg assignment operator" << std::endl;
+      auto[ kid, rid ] = rhs.get_ids();
+      set_rid( rid );
+      set_kid( kid );
+      _bactive = rhs.is_active();
+      _key     = rhs.get_key();
+      _rank    = rhs.get_rank();  
+      _tag     = rhs.get_tag();
+      _ozmsg   = rhs.copy_data();
+    }
+    catch(...) { std::cout << "thrown exception from assignment mpi_sendrecv_pmsg" << std::endl; }
     return *this;
   }
 
@@ -76,7 +89,15 @@ struct mpi_sendrecv_pmsg : _base_pending_msg
   std::string  get_key ( )  const { return _key;  }
  
   std::optional<zmq::multipart_t>
-  copy_data( ) const { return _ozmsg->clone(); }  
+  copy_data( ) const 
+  { 
+    std::cout << "is _ozmsg.empty() = " << _ozmsg->empty() << std::endl;
+    std::cout << " _ozmsg.size () = " << _ozmsg->size() << std::endl;
+    std::cout << "is _ozmsg payload = " << (bool)_ozmsg << std::endl;
+    std::cout << " copying data... in mpi_sendrecv_pmsg " << std::endl;
+    if( _ozmsg ) return _ozmsg->clone(); 
+    else return {};
+  }  
 
   std::optional<zmq::multipart_t>&&
   move_data( ) { return std::move( _ozmsg ); }  
@@ -136,12 +157,17 @@ class mpi_pending_msg_registry
     void add_send_pmsg( std::string key, int rank, int tag, zmq::multipart_t&& zmsg )
     {
       //step 1: create a send message 
+      std::cout << "Creating mpi_send_pmsg..." << std::endl;
       auto spmsg = mpi_send_pmsg( key, rank, tag, std::forward<zmq::multipart_t>(zmsg) );
       //step 2) create a empty recv message
+      std::cout << "Creating mpi_recv_pmsg..." << std::endl;
       auto rpmsg = mpi_recv_pmsg( key, rank, tag);
       //step 3) add send then recv
+      std::cout << "Adding send message..." << std::endl;
       add_pending_message( key, std::move(spmsg) );     
+      std::cout << "Adding recv message..." << std::endl;
       add_pending_message( key, std::move(rpmsg) );
+      std::cout << "Completed add_send_pmsg..." << std::endl;
     }
  
     auto read_recv_pmsg( std::optional<std::pair<int, int> > rank_tag ={},
