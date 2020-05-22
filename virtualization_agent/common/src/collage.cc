@@ -283,7 +283,7 @@ pico_return collage::_col_send_req( PICO_IN_TYPE ) //vars are request, and reply
   req->set_header( _crh );
 
   //The two is based on the header section ( resource_str and nargs )
-  for(auto i : iota((ulong)2,nargs+2) )
+  for(auto i : iota((ulong)2,nargs+1) )
   {
     auto[b_sign, b_type, type_size, v_size, msg] = 
       request.get_memblk(i); 
