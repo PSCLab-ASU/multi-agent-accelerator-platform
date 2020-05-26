@@ -20,10 +20,11 @@ int main(int argc, char ** argv)
   int org_argc = argc;
   std::string new_exec_str="";
   const std::string nex_addr   = std::string("ipc:///home_nexus");
-  const std::string accel_addr = std::string("ipc:///home_accel");
   const std::string accel_ext_addr = std::string("tcp://*:8001");
 
-  auto[asa, jobId, host_file, repo,  async] = get_init_parms( &argc, &argv);
+  auto[asa, jobId, host_file, repo,  async, spawn_bridges] = get_init_parms( &argc, &argv);
+  //needs to line up with the input args
+  const std::string accel_addr = std::string("ipc:///home_accel-") + jobId;
   if( asa.empty() ) { default_accel=true; asa = accel_addr; }
 
   for(auto i : iota(1, org_argc) )
@@ -40,7 +41,7 @@ int main(int argc, char ** argv)
  
   new_exec_str += "--accel_address=" + asa + std::string(" ");
   new_exec_str += "--accel_job_id=" + jobId + std::string(" ");
-  new_exec_str += "&";
+
   //router path
   //nexus is a hardcoded address
   //generate context
@@ -52,16 +53,13 @@ int main(int argc, char ** argv)
   frontend.bind( accel_ext_addr );
   //home nexus connections are in the accel_service interface
   //all async recieving channel happen throught the router
-  accel_service xcelerate_intf = accel_service(jobId, nex_addr, host_file, repo );
-
-  //ROUTER
-  int stat = std::system( new_exec_str.c_str() );
+  accel_service xcelerate_intf = accel_service(jobId, nex_addr, host_file, repo, spawn_bridges );
  
   while(!xcelerate_intf.check_stop())
   {
     zmq::multipart_t request;
 
-    stat   = request.recv(frontend, ZMQ_NOBLOCK);
+    int stat = request.recv(frontend, ZMQ_NOBLOCK);
    
     status = xcelerate_intf.submit( std::move(request) );
 

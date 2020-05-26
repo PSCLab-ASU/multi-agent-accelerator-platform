@@ -686,7 +686,6 @@ std::list<std::string> flattened_map(const var_maps<K,V>& vmap)
 } 
 
 
-
 template void print_map<std::string, std::string>(std::ostream&, std::map<std::string, std::string> const&);
 template void print_mmap<std::string, std::string>(std::ostream&, std::multimap<std::string, std::string> const&);
 template void print_mmap<vhh, std::string>(std::ostream&, std::multimap<vhh, std::string> const&);

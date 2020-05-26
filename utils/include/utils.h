@@ -18,6 +18,7 @@
 #include <mpi.h>
 #include <boost/type_traits.hpp>
 #include <boost/type_index.hpp>
+#include <boost/range/algorithm.hpp>
 
 #ifndef GENUTILS
 #define GENUTILS
@@ -58,6 +59,13 @@ static const std::map<std::string, zmsg_section_type> g_zst_map =
   {"DOUBLE", zmsg_section_type::DOUBLE},
   {"BOOL",   zmsg_section_type::BOOL},
   {"NONE",   zmsg_section_type::NONE}
+};
+
+enum struct env_vars { ENV_AGENT_ROOT=0, ENV_NONE };
+
+const std::map<env_vars, std::string> g_env_vars_map =
+{
+ { env_vars::ENV_AGENT_ROOT, "AGENT_ROOT_DIR"}
 };
 
 typedef struct _pcie_device_id 
@@ -220,9 +228,52 @@ auto reverse_map_find( auto& base_map, auto val )
       return entry.first;
     }
   } 
+  
+}
+
+//get enviroment vars
+template<env_vars evar>
+constexpr std::function<std::optional<std::string>()> get_env_var( )
+{
+  return []( )->std::optional<std::string>
+  {
+    std::string env_var = g_env_vars_map.at(evar);
+
+    std::string upper_ev, lower_ev;
+    boost::transform( env_var, upper_ev.begin(),
+    [](unsigned char c) { return std::toupper(c); } );
+
+    boost::transform( env_var, lower_ev.begin(),
+    [](unsigned char c) { return std::tolower(c); } );
+
+    char* lenv_var = std::getenv( lower_ev.c_str() );
+    char* uenv_var = std::getenv( upper_ev.c_str() );
+
+    if( (lenv_var == nullptr) && (uenv_var == nullptr) )
+    {
+      std::cout << "Could not find root agent directory!" << std::endl;
+      return {};
+    }
+    else if( uenv_var != nullptr )
+      return uenv_var;
+    else if(lenv_var != nullptr )
+      return lenv_var;
+    return {};
+  };
 
 }
 
+template <typename C, typename T>
+concept PushBackMovable = requires (C c, T t) {
+    { c.push_back(t) } -> std::same_as<void>;
+    { c.push_back(std::move(t)) } -> std::same_as<void>;
+};
+
+template <typename T, PushBackMovable<std::remove_reference_t<T>> C>
+void operator+=(C& lhs, T&& rhs)
+{
+    lhs.push_back(std::forward<T>(rhs));
+}
 
 std::string generate_random_str();
 

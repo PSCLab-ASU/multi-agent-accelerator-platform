@@ -2,19 +2,23 @@
 #include <type_traits>
 //#include <boost/range/algorithm/for_each.hpp>
 #include <boost/range/algorithm.hpp>
+#include <boost/algorithm/string.hpp>
 
 #ifndef ANODEMAN
 #define ANODEMAN
 
-anode_manager::anode_manager( std::string jobId, std::string hnex, std::vector<std::string> rnex)
+anode_manager::anode_manager( std::string jobId, std::string hnex, 
+                              std::vector<host_entry> rnex_desc,
+                              std::optional<std::string> bridge_parms)
 : _zctx( zmq::context_t() ) , _remote_anodes()
 {
+  _bridge_parms = bridge_parms;
   //pass in jobId
   _job_id = jobId;
   //adding the home node
   add_anode( hnex );
   //add the remote nodes
-  add_anodes( rnex );
+  add_anodes( rnex_desc );
   
 }
 
@@ -86,17 +90,10 @@ std::vector<zmq::multipart_t> anode_manager::recv_all()
 
 }
 
-void anode_manager::add_anodes( std::vector<std::string> remote_anodes)
+void anode_manager::add_anodes( std::vector<host_entry> remote_anodes)
 {
   for( auto anode : remote_anodes )
     add_anode( anode );
-}
-
-void anode_manager::add_anode( std::string nex )
-{ 
-  anode an = anode( _job_id, _zctx, nex);
-  _remote_anodes.push_back( std::move(an) );
-
 }
 
 void anode_manager::remove_anode( std::string remote_address )

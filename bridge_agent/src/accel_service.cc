@@ -17,6 +17,7 @@ accel_service::accel_service()
 
   command_set[ctrl::ping]           = BIND_ACTION(_accel_ping_);
   command_set[ctrl::ninit]          = BIND_ACTION(_accel_ninit_);
+  command_set[ctrl::sinit]          = BIND_ACTION(_accel_sinit_);
   command_set[ctrl::rinit]          = BIND_ACTION(_accel_rinit_);
   command_set[ctrl::updt_manifest]  = BIND_ACTION(_accel_updt_manifest_);
   command_set[ctrl::claim]          = BIND_ACTION(_accel_claim_);
@@ -30,11 +31,12 @@ accel_service::accel_service()
 }
 
 accel_service::accel_service(std::string jobId, std::string hnex, 
-                             std::string host_file, std::string repo)
+                             std::string host_file, std::string repo, bool spawn_bridges)
 : accel_service()
 {
   _job_id = jobId;
   _repo   = repo;
+  _spawn_bridges = spawn_bridges;
   _stop.store( false );
 
   _index_repositories( _repo );
@@ -47,40 +49,29 @@ accel_service::accel_service(std::string jobId, std::string hnex,
     //load configuration file
     _config_file = _import_configfile( host_file );
 
-    auto rnex = _config_file->get_all_conn_str(zmq_transport_t::EXTERNAL);
-    std::cout << "hnex = " << hnex << std::endl;
-    
-    for( auto nex : rnex ) std::cout << "rnex = "<< nex << std::endl;
+    auto rnex_list = _config_file->get_host_list();
+    std::vector<host_entry> rnex(rnex_list.size());
+    boost::transform( rnex_list, rnex.begin(), 
+                      [](auto npair){ return npair.second; });
+   
+    std::string bridge_parms = _generate_bridge_parms( );
 
-    _node_manager = anode_manager( _job_id,
-                                   hnex, 
-                                   std::vector<std::string>( rnex.begin(), rnex.end()) );
+    if( spawn_bridges )
+      _node_manager = anode_manager( _job_id, hnex, rnex, bridge_parms );
+    else
+      _node_manager = anode_manager( _job_id, hnex, rnex, {} );
+     
   }
   else std::cout <<"xcelerate: no host file!" << std::endl;
+
+  //update state information 
+  stat_agent.update_status(status_agent::app_state::INITIALIZING);
 
 }
 
 accel_service::~accel_service() 
 {
   
-}
-///////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////
-void accel_service::_index_repositories( std::string repos, bool bAppend )
-{
-  //repos separated via colons
-  //if( !bAppend ) 
-  //return {};
-}
-
-void accel_service::_add_nexresp_hdr( uint nodeIdx, zmq::multipart_t& msg)
-{
-  std::string method  = msg.popstr();
-  std::string nex_id = msg.popstr();
-
-  msg.pushstr( std::to_string( nodeIdx ) );
-  msg.pushstr( method ); 
 }
 
 mpi_return accel_service::submit(zmq::multipart_t && msg)
@@ -110,6 +101,38 @@ mpi_return accel_service::submit(zmq::multipart_t && msg)
   ////////////////////////////////////////////////////////////////////////////////
   return mpi_return{ stat };
 }
+
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+std::string accel_service::_generate_bridge_parms()
+{
+  std::string parms="";
+
+  parms += "--accel_job_id=" + _job_id +
+           " --accel_async=true" +
+           " --accel_host_file=" + _host_file +
+           " --accel_spawn_bridge=false";
+ 
+  return parms;
+}
+
+void accel_service::_index_repositories( std::string repos, bool bAppend )
+{
+  //repos separated via colons
+  //if( !bAppend ) 
+  //return {};
+}
+
+void accel_service::_add_nexresp_hdr( uint nodeIdx, zmq::multipart_t& msg)
+{
+  std::string method  = msg.popstr();
+  std::string nex_id = msg.popstr();
+
+  msg.pushstr( std::to_string( nodeIdx ) );
+  msg.pushstr( method ); 
+}
+
 
 std::vector<zmq::multipart_t> accel_service::_read_all_nex_msgs()
 {
@@ -208,6 +231,22 @@ accel_service::_accel_nexus_redir_(accel_header hdr, zmq::multipart_t&& req)
 }
 
 std::vector<zmq::multipart_t> 
+accel_service::_accel_sinit_(accel_header hdr, zmq::multipart_t&& req)
+{ 
+  std::cout << "entering ... : " << __func__ << std::endl;
+  std::vector<zmq::multipart_t> out;
+  stat_agent.addr = hdr.requesting_id.value();
+  //update state information 
+  stat_agent.update_status(status_agent::app_state::STARTED);
+  //adding start status message to outbound messages
+  auto[state_chg, stat_msg] = std::move( stat_agent.generate_status_msg() );
+  //attached state if changed
+  if( state_chg ) out += std::move( stat_msg );
+ 
+  return out;
+}
+
+std::vector<zmq::multipart_t> 
 accel_service::_accel_ninit_(accel_header hdr, zmq::multipart_t&& req)
 { 
   std::cout << "entering ... : " << __func__ << std::endl;
@@ -236,7 +275,18 @@ accel_service::_accel_ninit_(accel_header hdr, zmq::multipart_t&& req)
       client_msg.finalize();
       out.push_back( std::move( client_msg.get_zmsg() ) ); 
     }
+    //update state information 
+    stat_agent.update_status(status_agent::app_state::INITIALIZED);
   }
+  else
+  {
+    stat_agent.update_status(status_agent::app_state::INITIALIZING);
+  }
+
+  //adding start status message to outbound messages
+  auto[state_chg, stat_msg] = std::move( stat_agent.generate_status_msg() );
+  //attached state if changed
+  if( state_chg ) out += std::move( stat_msg );
 
   return out;
 }
@@ -267,6 +317,8 @@ accel_service::_accel_rinit_(accel_header hdr, zmq::multipart_t&& req)
                       ctrl::resp, {},  rid, hdr.tag );
     client_msg.finalize();
     out.push_back( std::move( client_msg.get_zmsg() ) ); 
+    //update state information 
+    stat_agent.update_status(status_agent::app_state::INITIALIZED);
   }
   else
   {
@@ -276,7 +328,14 @@ accel_service::_accel_rinit_(accel_header hdr, zmq::multipart_t&& req)
     std::lock_guard guard(_pending_msgs_reg );
     _pending_msgs_reg.add_pending_message( generate_random_str(), 
                                            std::move(ipmsg) );
+
+    stat_agent.update_status(status_agent::app_state::INITIALIZING);
   }
+  
+  //adding start status message to outbound messages
+  auto[state_chg, stat_msg] = std::move( stat_agent.generate_status_msg() );
+  //attached state if changed
+  if( state_chg ) out += std::move( stat_msg );
 
   return out;
 }

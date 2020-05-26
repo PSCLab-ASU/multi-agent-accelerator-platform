@@ -11,9 +11,9 @@
 namespace nexus_utils
 {
   enum struct nexus_ctrl { ping, rem_manifest, init, rem_jinit, rem_claim, rem_cclaim, rem_rsync, 
-                           rem_dealloc, rem_setparm, hw_rollcall, hw_id, hw_qry, 
+                           rem_dealloc, rem_setparm, rem_spawnba, hw_rollcall, hw_id, hw_qry, 
                            hw_reg, hw_upt, hw_init, nex_upt, nex_uptd, nex_gid, nex_conn, 
-                           nex_snd, nex_recv, nex_def };
+                           nex_snd, nex_recv, nex_def,  };
 
   const std::map< nexus_ctrl, std::string> nexus_rolodex = 
   {

@@ -175,6 +175,9 @@ template zmsg_builder<std::string, std::string, std::string, std::string>::zmsg_
 template zmsg_builder<std::string, std::string>::zmsg_builder(zmq::multipart_t &&);
 template zmsg_builder<std::string, std::string, std::string>::zmsg_builder(zmq::multipart_t &&);
 //2)
+template zmsg_builder<std::string, std::string>&
+zmsg_builder<std::string, std::string>::add_arbitrary_data<bool>(bool);
+
 template zmsg_builder<std::string, std::string, std::string>&
 zmsg_builder<std::string, std::string, std::string>::add_arbitrary_data<bool>(bool);
 

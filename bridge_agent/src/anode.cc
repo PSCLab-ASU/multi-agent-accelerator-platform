@@ -1,12 +1,11 @@
 #include <anode.h>
 #include <nexus_utils.h>
 
-anode::anode(std::string jobId, zmq::context_t& zctx, std::string nex_addr )
-: _bActive( false ), _job_id(jobId), _nexus_address( nex_addr ),
-  _zsock( zctx, ZMQ_DEALER ), _ncache()
+anode::anode(std::string jobId, zmq::context_t& zctx, 
+             std::string nex_addr, std::optional<std::string> bridge_parms, bool is_local )
+: _bActive( false ), _job_id(jobId), _nexus_address( nex_addr ), _node_exists(false),
+  _zsock( zctx, ZMQ_DEALER ), _ncache(), _bridge_parms(bridge_parms), _is_local( is_local)
 {
-  _bActive     = false;
-  _node_exists = false;
   if( zmq_ping( ZPING_TYPE::NONE, nex_addr ) ) 
   {
     std::string id = "anode-" + generate_random_str();
@@ -21,7 +20,8 @@ anode::anode(std::string jobId, zmq::context_t& zctx, std::string nex_addr )
 anode::anode( anode&& rhs)
 : _bActive( rhs.isActive() ),   _nexus_address( rhs.get_address() ),
   _zsock( rhs.move_zsock() ),   _tx_id( rhs.get_tx_id() ), _rx_id( rhs.get_rx_id() ),
-  _ncache(rhs.move_ncache()), _claim_history( rhs.move_claim_history() ) 
+  _ncache(rhs.move_ncache()), _claim_history( rhs.move_claim_history() ), _bridge_parms( rhs.get_bp()),
+  _is_local( rhs.get_locality() ) 
 {}
 
 int anode::_pre_init()
@@ -31,6 +31,16 @@ int anode::_pre_init()
 
   auto zb = nexus_utils::start_request_message( method, key );
   zb.add_arbitrary_data( _job_id );
+  zb.add_arbitrary_data( _is_local );
+
+  if( _bridge_parms ) 
+  {
+    zb.add_arbitrary_data( true );
+    zb.add_arbitrary_data( _bridge_parms.value() );
+  }
+  else
+    zb.add_arbitrary_data( false );
+
   zb.finalize();
 
   send( zb.get_zmsg() );

@@ -48,14 +48,28 @@ const std::map<valid_function_header, std::string> g_func_map {
 };
 ///////////////////////////////////////////////////////////////////
 enum struct valid_host_header{
- NAME=0, IPADDR, PORT, NO_PARMS 
+ NAME=0, IPADDR, PORT, MODE, SLOTS, MAX_SLOTS, NO_PARMS 
+};
+
+enum struct node_mode{
+  ADS_ONLY, ACCEL_ONLY, ADS_ACCEL, NONE
+};
+
+const std::map<node_mode, std::string> g_node_mode_map{
+  {node_mode::ADS_ONLY,   "ads_only"   },
+  {node_mode::ACCEL_ONLY, "accel_only" },
+  {node_mode::ADS_ACCEL,  "ads_accel"  },
+  {node_mode::NONE,       "none"       }
 };
 
 using vhh = valid_host_header;
 const std::map<valid_host_header, std::string> g_host_map {
-  {vhh::NAME,   "host_name" },
-  {vhh::IPADDR, "ip_addr"   },
-  {vhh::PORT,   "port"      }
+  {vhh::NAME,     "host_name"  },
+  {vhh::IPADDR,   "ip_addr"    },
+  {vhh::MODE,     "mode"       },
+  {vhh::SLOTS,    "slots"      },
+  {vhh::MAX_SLOTS,"max_slots"  },
+  {vhh::PORT,     "port"       }
 };
 ////////////////////////////////////////////////////////////////////
 
@@ -114,21 +128,45 @@ class host_entry final : public base_entry{
   public:
 
     using desc_t   = std::multimap<vhh, std::string>;
-    using key_type = desc_t::key_type;     
+    using key_type = desc_t::key_type;  
+   
     //ctor
+    host_entry() : base_entry(""){}
     host_entry( std::string);
+    host_entry& operator=(  const host_entry& );
     //get the header map
     desc_t& get_header_desc(const key_type) final;
     //gives the first value of the list related
     //to the key specified since its a multimap
     std::string get_first_header_attr(const key_type);
     std::string get_last_header_attr(const key_type);
-
+    std::string get_ext_connstr();
+    node_mode get_node_mode();
+    //get the header map
+    const desc_t& get_header_desc() const
+    {
+      return _header_desc; 
+    }
+    
+    
     //overloaded std::cout
     friend std::ostream& operator<<(std::ostream &, const host_entry& ); 
    
+    const std::function<std::string()> get_addr   = _get_first_attr<vhh::NAME>();
+    const std::function<std::string()> get_port   = _get_first_attr<vhh::PORT>();
+    const std::function<std::string()> get_mode   = _get_first_attr<vhh::MODE>();
+    const std::function<std::string()> get_slots  = _get_first_attr<vhh::SLOTS>();
+    const std::function<std::string()> get_mslots = _get_first_attr<vhh::MAX_SLOTS>();
+    
     //NEED TO FIX TBD doesn't compile with private
-    private:
+  private:
+
+    template< key_type val>
+    constexpr std::function<std::string()> _get_first_attr()
+    {
+      return [this](){ return get_last_header_attr(val); };
+    }
+
     //functional keys
     desc_t _header_desc;
     

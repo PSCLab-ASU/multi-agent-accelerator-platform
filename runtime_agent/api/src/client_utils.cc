@@ -58,7 +58,8 @@ bool metadata::dst_rank_exists() const
   return (bool) dst_rank;
 }
 
-std::tuple<std::string, std::string, std::string, std::string, bool> get_init_parms( int * argc, char ***  argv)
+std::tuple<std::string, std::string, std::string, std::string, bool, bool> 
+get_init_parms( int * argc, char ***  argv)
 {
 
   uint dash_dash_pos=0;
@@ -85,11 +86,12 @@ std::tuple<std::string, std::string, std::string, std::string, bool> get_init_pa
   
   } 
 
-  auto asa    = vals.at( "--accel_address" );
-  auto job_id = vals.at( "--accel_job_id" );
-  auto async  = vals.at( "--accel_async" );
-  auto repo   = vals.at( "--accel_repo" );
-  auto hfile  = vals.at( "--accel_host_file" );
+  auto asa      = vals.at( "--accel_address" );
+  auto job_id   = vals.at( "--accel_job_id" );
+  auto async    = vals.at( "--accel_async" );
+  auto repo     = vals.at( "--accel_repo" );
+  auto hfile    = vals.at( "--accel_host_file" );
+  auto spawn_ba = vals.at( "--accel_spawn_bridge" );
 
   //return argc
   *argc = dash_dash_pos;
@@ -97,7 +99,9 @@ std::tuple<std::string, std::string, std::string, std::string, bool> get_init_pa
   //get job id
   if( job_id.empty() ) job_id = generate_random_str();
 
-  return std::make_tuple(asa, job_id, hfile, repo,  async=="true"?true:false );
+  return std::make_tuple(asa, job_id, hfile, repo,
+                         async=="true"?true:false,
+                         spawn_ba=="true"?true:false );
 }
 
 bool zmq_ping( ZPING_TYPE ptype, std::string addr)

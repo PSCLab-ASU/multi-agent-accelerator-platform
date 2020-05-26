@@ -23,6 +23,9 @@
 #include <nexus_utils.h>
 #include <accel_utils.h>
 #include <npending_msgs.h>
+#include <cstdlib>
+#include <optional>
+#include <boost/range/algorithm.hpp>
 
 #ifndef RES_TRACK
 #define RES_TRACK
@@ -70,6 +73,9 @@ class resmgr_frontend
     int set_zmq_context  (zmq::context_t *);
     int complete_request();
 
+    //multi-reply buffer
+    std::vector<std::pair<int, zmq::multipart_t> > multi_reply_buffer;
+
   private:
     //private functions
     //purpose of this function is to send out P2P connection
@@ -78,6 +84,14 @@ class resmgr_frontend
     int _respond_with_manifest( accel_utils::accel_ctrl, zmq::multipart_t * );
     int _init_remote_conn( std::string, std::string, std::vector<std::string> &);
     int _build_nex_conn( zmq::multipart_t &);
+
+    const std::function<std::optional<std::string>()> 
+      _get_root_agent_dir = get_env_var<env_vars::ENV_AGENT_ROOT>();
+
+    //kick off bridge agent
+    void _launch_bridge( std::string );
+    //find source bridge address
+    std::optional<std::string> _find_src_bridge( std::string );
     //find or create entry in the nexus by nexud name
     nex_cache_ptr& _find_create_nexcache( std::string, bool& );
     //find or create entry in the job_registry by jobId
@@ -98,6 +112,7 @@ class resmgr_frontend
 
     //this variables gets updated everytime a call is made to
     //the frontend
+    std::optional<std::string> agent_root_dir;
     std::string       current_req_addr;
     std::string       current_proc_id;
     std::string       current_mpirun_id;
@@ -134,6 +149,8 @@ class resmgr_frontend
     //key = rid + ClaimId
     //value = comma separated
     std::map<std::string, std::string> _claim_registry;
+    //bridge registry
+    std::map<std::string, std::string> _bridge_registry;
     //local zmq socket
     zmq::socket_t * hw_entry;
     zmq::socket_t * hw_broadcast;

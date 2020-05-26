@@ -35,7 +35,7 @@ class accel_service : accel_thread_manager
 {
   public: 
     accel_service();
-    accel_service( std::string, std::string, std::string, std::string );
+    accel_service( std::string, std::string, std::string, std::string, bool );
     ~accel_service();
 
     bool check_stop(){ 
@@ -60,7 +60,9 @@ class accel_service : accel_thread_manager
       //type      size       val
       req.pop(); req.pop(); req.pop();
     } 
-   
+     
+    std::string _generate_bridge_parms();
+ 
     void _add_nexresp_hdr( uint, zmq::multipart_t& );
     void _index_repositories( std::string, bool bAppend = false );
 
@@ -72,6 +74,7 @@ class accel_service : accel_thread_manager
     API_MODULE(_accel_ping_)
     API_MODULE(_accel_updt_manifest_)
     API_MODULE(_accel_ninit_)
+    API_MODULE(_accel_sinit_)
     API_MODULE(_accel_rinit_)
     API_MODULE(_accel_claim_)
     API_MODULE(_accel_claim_resp_)
@@ -81,10 +84,11 @@ class accel_service : accel_thread_manager
     API_MODULE(_accel_nexus_redir_)
     API_MODULE(_accel_finalize_)
     API_MODULE(_accel_shutdown_)
-  
+
     //stop service
     std::atomic_bool _stop;
- 
+    //spawn bridges if so or not
+    bool _spawn_bridges;
     std::string _job_id; 
     //host file path 
     std::string _host_file;
@@ -103,7 +107,9 @@ class accel_service : accel_thread_manager
     //        requester_id  state 
     ads_registry _data_steering_reg;
     // kernel repo - holds potential 
-    ncache_registry _kernel_registry;   
+    ncache_registry _kernel_registry;
+ 
+    status_agent stat_agent;
 };
 
 #endif

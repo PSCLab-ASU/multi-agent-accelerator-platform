@@ -71,7 +71,8 @@ resmgr_frontend::resmgr_frontend(zmq::socket_t * entry_rtr, zmq::socket_t * publ
   repos        = split_str<':'>( repo ); 
   //add home nexus
   home_nexus  =_find_create_nexcache(home_addr, found);
-  
+  //get agent root directory
+  agent_root_dir = _get_root_agent_dir();  
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -179,12 +180,73 @@ int resmgr_frontend::_respond_with_manifest( accel_utils::accel_ctrl method, zmq
   return 0;
 }
 
+void resmgr_frontend::_launch_bridge( std::string bridge_parms )
+{
+  std::string cmd="";
+
+  if( agent_root_dir )
+    cmd = agent_root_dir.value() + "bridge_agent.bin -- " + bridge_parms + " &"; 
+  else
+    cmd = "bridge_agent.bin -- " + bridge_parms + " &"; 
+  
+  std::cout << "Spawning bridge: " << cmd << std::endl;  
+  std::system( cmd.c_str() );
+}
+
+std::optional<std::string>
+resmgr_frontend::_find_src_bridge( std::string job_id)
+{
+  auto bridge_addr = _bridge_registry.find( job_id );
+
+  if( bridge_addr != _bridge_registry.end() ) 
+    return bridge_addr->second;
+  else return {};
+
+}
+
+
 int resmgr_frontend::_res_jinit_(zmq::multipart_t * req, zmq::multipart_t * rep)
 { 
-  //Job Init
-  //DO SOME INITIALIZATION WORK
-  //CALL MANIFEST
-  return _respond_with_manifest( accel_utils::accel_ctrl::ninit, rep );
+  zmsg_viewer<> msgv(*req);
+  std::string job_id = msgv.get_section<std::string>(0).front();
+  bool is_local = msgv.get_section<bool>(1).front();
+  bool spawn_bridge = msgv.get_section<bool>(2).front();
+  if( spawn_bridge )
+  {
+    auto _bridge_parms = msgv.get_section<std::string>(3).front();
+    _bridge_registry[job_id] = current_req_addr;
+
+    _launch_bridge( _bridge_parms );
+    //dont have to do anything
+    //wait for next message from local bridge
+    rep->clear();
+  }
+  else
+  {
+    //DO SOME INITIALIZATION WORK
+    //CALL MANIFEST
+    auto src_bridge = _find_src_bridge( job_id );
+    _respond_with_manifest( accel_utils::accel_ctrl::ninit, rep );
+
+    if( src_bridge && is_local )
+    {
+       //push in the reply message
+       multi_reply_buffer.emplace_back( 3, rep->clone() );
+       rep->pushstr( src_bridge.value() );
+       multi_reply_buffer.emplace_back( 4, std::move(*rep) );
+       //erase entry from bridge registry
+       _bridge_registry.erase(job_id);
+       // clearing the message
+       rep->clear();
+       return 2; //two indicates look into the buffer for the messages
+    }
+    else
+    {
+      std::cout << "No source bridge found..." << std::endl;
+    }
+  }
+
+  return 0;
 
 }
 

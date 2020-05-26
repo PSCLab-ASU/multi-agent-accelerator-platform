@@ -79,6 +79,28 @@ int main(const int argc, const char *argv[])
       std::cout << "sending nex msg: "<< reply << std::endl;
       reply.send(conn);
     }
+    else if( reply.empty() && (status_further_action == 2) )
+    {
+      std::cout << "further action : queue elements" << 
+                    frontend_intf.multi_reply_buffer.size() << std::endl;
+
+      boost::for_each( frontend_intf.multi_reply_buffer, 
+                       [&](auto& item)
+      {
+        auto ret = item.first;
+        auto rep = std::move( item.second );
+    
+        std::cout << "reply action = " << ret << std::endl;
+
+        if( ret == 3 ) //return to requester
+          rep.pushstr( proc_addr );
+          
+        rep.send( conn );
+
+      });
+      //Delete all the messages from the buffer
+      frontend_intf.multi_reply_buffer.clear();
+    }
     else if( !reply.empty() && (status_further_action == 1) ) 
     {
       std::cout <<"Forwarding request..." <<std::endl;
@@ -87,6 +109,7 @@ int main(const int argc, const char *argv[])
     {
       std::cout <<"No response needed..." <<std::endl;
     }
+    
 
   }
 

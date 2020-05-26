@@ -1,0 +1,283 @@
+#!/usr/bin/python
+import os, sys, subprocess, time, re
+import string, random, enum, zmq, json
+
+def generate_random_str(num_char):
+  return ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(num_char))
+
+class APP_STATE(enum.Enum):
+  NOTSTARTED   = 0
+  STARTED      = 1
+  INITIALIZING = 2
+  INITIALIZED  = 3
+  RUNNING      = 4
+  def get_value( state_str ):
+    if APP_STATE.NOTSTARTED.name == state_str:
+      return APP_STATE.NOTSTARTED.value
+    elif APP_STATE.STARTED.name == state_str:
+      return APP_STATE.STARTED.value
+    elif APP_STATE.INITIALIZING.name == state_str:
+      return APP_STATE.INITIALIZING.value
+    elif APP_STATE.INITIALIZED.name == state_str:
+      return APP_STATE.INITIALIZED.value
+    elif APP_STATE.RUNNING.name == state_str:
+      return APP_STATE.RUNNING.value
+    else:
+      print "Could not match state" + state_str
+    
+ 
+mpix_defaults = [
+  { "name" : "accel_address",      "need_value" : True,  "default" : "" },
+  { "name" : "accel_job_id",       "need_value" : True,  "default" : generate_random_str(16) },
+  { "name" : "accel_async",        "need_value" : True,  "default" : "true" },
+  { "name" : "accel_repo",         "need_value" : True,  "default" : "" },
+  { "name" : "accel_spawn_bridge", "need_value" : True,  "default" : "true" },
+  { "name" : "accel_host_file",    "need_value" : True,  "default" : "" },
+  { "name" : "accelerate",         "need_value" : False, "default" : "" }
+]
+
+class parameter_parser():
+  def __init__(self, cmdline):
+    self.input_parms  = ' '.join(cmdline[1:])
+    self.mpi_exec     = 'mpiexec.hydra ' + self.input_parms
+    self.mpix_exec    = os.getenv('AGENT_ROOT_DIR')+ "bridge_agent.bin " 
+    self.mpi_hostfile = self.get_hostfile_location()
+    self._process_mpix_parms()
+    self._process_mpi_parms()
+
+  def get_mpix_parm_value(self, parm_name):
+    pp = parameter_parser( self.get_mpix_cmdline() ) 
+    status, value = pp._get_parm_value( parm_name )
+    return value
+
+  def _requires_value( self, parm_name):
+    for parm in mpix_defaults:
+      if parm['name'] == parm_name:
+        return parm["need_value"]
+
+  def _generate_regex( self, parm_name ):
+    reg = '--?' + parm_name + '(?=(?=\ --?)|[ =]([^\ ]+))'
+    return reg
+ 
+  def _remove_parm_from_mpi(self, parm_name):
+    regex = self._generate_regex( parm_name )
+    self.mpi_exec = re.sub(regex, '', self.mpi_exec ) 
+
+  def _get_parm_value(self, parm_name):
+    status = 0
+    value  = ''
+    found_match = False
+    regex = self._generate_regex( parm_name )
+    matches = re.finditer(regex, self.input_parms, re.MULTILINE)
+    for match in matches:
+      found_match = True 
+      if match.group(1) is not None:
+        value = str(match.group(1))
+      elif not self._requires_value( parm_name ):
+        value = "true"
+      else :
+        status = 1
+    #if not match found param doesn't exist
+    if not found_match:
+      status = 2 
+    return status, value
+        
+  def _process_mpix_parms(self):
+    for parm in mpix_defaults:
+      name    = parm['name']
+      default = parm['default']
+      status, value = self._get_parm_value( name )
+      if status == 2:
+        if default is not '': 
+          #print 'defaulting ' + name + ' to ' + default 
+          self.mpix_exec += '--' + name + '=' + default + " "
+      elif status == 1:
+        print "Parse Error for " + name + ", default to " + default
+      else:
+        self.mpix_exec += '--' + name + '=' + value + " "
+
+  def _process_mpi_parms(self):
+    for parm in mpix_defaults:
+      self._remove_parm_from_mpi(  parm['name'] )
+    
+  def get_hostfile_location(self) : 
+    return self._get_parm_value("accel_host_file")
+
+  def get_mpix_cmdline(self):
+    return self.mpix_exec.split()
+
+  def get_mpi_cmdline(self):
+    return self.mpi_exec.split()
+
+class sync_mpix_mpi_init():
+  def __init__(self, job_id, proc):
+    self._saved_state = APP_STATE.NOTSTARTED.value
+    self._job_id    = job_id
+    context = zmq.Context()
+    print "Connecting to server..."
+    socket = context.socket(zmq.DEALER)
+    socket.setsockopt(zmq.IDENTITY, b"status-agent")
+    socket.connect ("ipc:///home_accel-%s" % job_id)
+    
+  def ping(self, retry=10):
+    self.socket.send_multipart([b"PING", b"PING", b"PING"])
+    while True:
+      if not retry :
+        return False # FAILED
+      try:
+        msg = self.socket.recv_multipart(zmq.NOBLOCK)
+        return True # SUCCEED
+      except zmq.error.Again: 
+        retry = retry - 1
+        time.sleep(1)
+
+  def wait_for_init(self):
+    time.sleep(4)
+    status = self.ping()
+    if status :
+      _send_init()
+      status = self._check_status_or_timeout(APP_STATE.STARTED)
+      if status : 
+        status = self._check_status_or_timeout(APP_STATE.INITIALIZING)
+        if status :
+          return self._check_status_or_timeout(APP_STATE.INTIALIZED)
+        else :
+          print "Never completed initialization"
+      else : 
+        print "Never started bridge"
+    else:
+      print "PING timed out!"
+      return status
+
+  def _send_init():
+    self.socket.send_multipart([b"__ACCEL_INIT_SA__", b"PLACEHOLDER", b"XXXXX"])
+      
+  def wait_for_completion(self):
+    timeout = 10
+    status = self._check_status_or_timeout(APP_STATE.RUNNING, timeout)
+    if status :
+      _wait_for_cleanup()
+
+  def _check_status_or_timeout(self, state, timeout=10, retry=10):
+    #means the bridge is passed the state requesting
+    #skip wait
+    if ( (state.value <= _saved_state)):
+      return True
+
+    while True:
+      if not retry :
+        return False # FAILED
+      try:
+        msg = self.socket.recv_multipart(zmq.NOBLOCK)
+        print( msg )
+        if (state.value <= APP_STATE.get_value(msg[0])):
+          save_state = APP_STATE.get_value(msg[0])
+          return True # SUCCEED
+      except zmq.error.Again: 
+        retry = retry - 1
+        time.sleep(timeout)
+
+  def _wait_for_cleanup():
+    #holds unitl the bridge sends the final cleanup response!
+    msg = self.socket.recv_multipart()
+    print "Program Complete..."
+
+class accelerator_ctrl():
+  def __init__(self, job_id):
+    self._job_id = job_id
+
+  def ping(self):
+    pass
+  def cleanup( self ):
+    pass
+  def wait_for_cleanup(self):
+    pass
+
+
+class mpix_hostfile_manipulator:
+  def __init__( self, mpix_hostfile ):
+    self._arg = ''
+    self._hosts = {}
+    self.is_mpi_host = False
+    #should probably check for existense TBD
+    if mpix_hostfile is not '': 
+      try:
+        with open(mpix_hostfile) as f:
+          data = json.load(f)
+        self._hosts = data['host_list']
+        self.is_mpi_host = any((host['mode'] == 'ads_only') or 
+                               (host['mode'] == 'ads_accel' ) for host in self._hosts)
+        self._construct_mpi_host_arg()
+      except:
+        print "Could not read mpix configfile! Check Path/Format"
+
+  def is_mpi_hosts_defined( self ):
+    return self.is_mpi_host
+  
+  def get_arg(self):
+    return self._arg
+
+  #creates an MPI formatted host file out of an MPIX hostfile
+  def _construct_mpi_host_arg(self ):
+    hosts = '--hosts '
+    found = False
+    for host in self._hosts:
+      hostname  = host['host_name']
+      mode      = host['mode'] 
+      max_slots = host['max_slots'] 
+      if (mode == 'ads_only') or (mode == 'ads_accel'):
+        hosts += (hostname + ',')*int(max_slots)
+        found = True
+    if found : 
+      self._arg = hosts[:-1]
+    else :
+      self._arg = ''
+
+#adds the mpi hostfile parameter to cmd
+def append_arg_to_cmd( cmd, mpi_host_arg ) :
+    if mpi_host_arg != '':
+      cmd.insert(1, mpi_host_arg)
+    return cmd
+
+def main():
+    mpix_pp        = parameter_parser( sys.argv )
+    #grab some command line arguments
+    job_id         = mpix_pp.get_mpix_parm_value('accel_job_id')
+    mpix_host_file = mpix_pp.get_mpix_parm_value('accel_host_file')
+    shall_accel    = mpix_pp.get_mpix_parm_value('accelerate')
+    accelerate     = (shall_accel == 'true')
+    #read mpix host file and generate mpi args
+    mpix_host_man  = mpix_hostfile_manipulator(mpix_host_file)
+    mpi_hosts_args = mpix_host_man.get_arg()
+    #connect to the accelerator agent utility
+    mpix_aa_ctrl   = accelerator_ctrl(job_id) 
+    #get cmdlines
+    mpix_cmd       = mpix_pp.get_mpix_cmdline()
+    mpi_cmd        = mpix_pp.get_mpi_cmdline()
+    mpi_cmd        = append_arg_to_cmd( mpi_cmd, mpi_hosts_args )
+
+    print "mpix_cmd : "   + ' '.join(mpix_cmd) + '\n'
+    print "mpi_cmd : "    + ' '.join(mpi_cmd) + '\n'
+
+    if accelerate:
+      print("Accelerating...\n")
+      #kick off source bridge agent
+      p_mpix = subprocess.Popen( mpix_cmd )
+      #checks to see if the status and configure files 
+      #were writen to
+      mpix_sync = sync_mpix_mpi_init(job_id, p_mpix)
+      status    = mpix_sync.wait_for_init()
+      #check if the intialization failed
+      if status : 
+        p_mpi = subprocess.Popen( mpi_cmd )
+      else:
+        mpix_aa_ctrl.cleanup()
+        # make a connection to the nexus ctrl should send a 
+        # signal to terminate all bridges with the jobId and free resources and claims
+    else :
+      print("Running Normal MPI...\n")
+      #kick off mpi process
+      p_mpi = subprocess.Popen( mpi_cmd )
+     
+if __name__ == "__main__":
+    main()

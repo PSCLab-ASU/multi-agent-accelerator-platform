@@ -95,6 +95,13 @@ const std::array<std::list<std::string>, N>  base_entry::serializeObj( )
 ///////////////////////////////////////////////////////////////////
 ////////////////////// host_entry methods//////////////////////////
 ///////////////////////////////////////////////////////////////////
+
+host_entry& host_entry::operator=( const host_entry& rhs)
+{
+  this->_header_desc = rhs.get_header_desc();
+  return *this;
+}
+
 host_entry::desc_t& 
 host_entry::get_header_desc(const host_entry::key_type key) 
 {
@@ -144,8 +151,19 @@ std::string host_entry::get_last_header_attr(const host_entry::key_type key)
   return val;
 }
 
+std::string host_entry::get_ext_connstr()
+{
+  return g_transport_map.at(zmq_transport_t::EXTERNAL) + 
+         get_last_header_attr(vhh::NAME) + ":" +
+         get_last_header_attr(vhh::PORT);
+}
 
+node_mode host_entry::get_node_mode()
+{
+  std::string mode_str = get_last_header_attr(vhh::MODE);
+  return reverse_map_find(g_node_mode_map, mode_str);
 
+}
 
 ///////////////////////////////////////////////////////////////////
 ////////////////////// func_entry methods//////////////////////////

@@ -68,11 +68,12 @@ typedef std::unique_ptr<void, mpi_pack_deleter_t> v_mpi_data_t;
 
 const std::map<std::string, std::string> valid_inputs
 {
-  {"--accel_address",""},
-  {"--accel_job_id",""},
-  {"--accel_async",""},
-  {"--accel_repo",""},
-  {"--accel_host_file",""}
+  {"--accel_address"     ,""},
+  {"--accel_job_id"      ,""},
+  {"--accel_async"       ,""},
+  {"--accel_repo"        ,""},
+  {"--accel_spawn_bridge",""},
+  {"--accel_host_file"   ,""}
 };
 
 
@@ -142,7 +143,7 @@ struct mpi_return
   std::string error_msg;
 };
 
-std::tuple<std::string, std::string, std::string, std::string, bool> 
+std::tuple<std::string, std::string, std::string, std::string, bool, bool> 
 get_init_parms( int * argc, char ***  argv);
 
 bool zmq_ping( ZPING_TYPE , std::string );
