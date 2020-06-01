@@ -13,7 +13,7 @@
 
 namespace accel_utils
 {
-  enum struct accel_ctrl {ping, sinit, ninit, rinit, send, recv, claim, shutdown,
+  enum struct accel_ctrl {ping, sinit, ninit, rinit, binit, send, recv, claim, shutdown,
                           test, finalize, nexus_rd, updt_manifest, claim_response };
 
   const std::map< accel_ctrl, std::string> accel_rolodex = 
@@ -22,6 +22,7 @@ namespace accel_utils
     {accel_ctrl::ninit,          "__ACCEL_NINIT"        },
     {accel_ctrl::sinit,          "__ACCEL_INIT_SA__"    },
     {accel_ctrl::rinit,          "__ACCEL_RINIT__"      },
+    {accel_ctrl::binit,          "__ACCEL_BINIT__"      },
     {accel_ctrl::updt_manifest,  "__UPDATE_MANIFEST__"  },
     {accel_ctrl::claim,          "__ACCEL_CLAIM__"      },
     {accel_ctrl::claim_response, "__ACCEL_CLAIM_RESP__" },
@@ -64,7 +65,7 @@ struct accel_header
 struct status_agent
 {
 
-  enum struct app_state {NOTSTARTED, STARTED, INITIALIZING, INITIALIZED, RUNNING};
+  enum struct app_state {NOTSTARTED, STARTED, INITIALIZING, INITIALIZED, COMPLETED};
 
   std::string to_string( app_state state )
   { 
@@ -74,7 +75,7 @@ struct status_agent
       case app_state::STARTED:      return "STARTED";
       case app_state::INITIALIZING: return "INITIALIZING";
       case app_state::INITIALIZED:  return "INITIALIZED";
-      case app_state::RUNNING:      return "RUNNING";
+      case app_state::COMPLETED:    return "COMPLETED";
       default: return "NA";
     }
   }
@@ -91,9 +92,9 @@ struct status_agent
   std::pair<bool, zmq::multipart_t> generate_status_msg()
   {
     bool state_chg = _state_updated;
-    _state_updated = false;
     if( addr )
     { 
+      _state_updated = false;
       zmsg_builder msg( addr.value(), to_string(_state), 
                         generate_random_str() );
       msg.finalize();

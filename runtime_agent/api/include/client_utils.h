@@ -73,7 +73,9 @@ const std::map<std::string, std::string> valid_inputs
   {"--accel_async"       ,""},
   {"--accel_repo"        ,""},
   {"--accel_spawn_bridge",""},
-  {"--accel_host_file"   ,""}
+  {"--accel_host_file"   ,""},
+  {"--accel_bridge_addr" ,""},
+  {"--accel_bridge_port" ,""}
 };
 
 
@@ -143,7 +145,8 @@ struct mpi_return
   std::string error_msg;
 };
 
-std::tuple<std::string, std::string, std::string, std::string, bool, bool> 
+std::tuple<std::string, std::string, std::string, 
+           std::string, bool, bool, std::string, std::string> 
 get_init_parms( int * argc, char ***  argv);
 
 bool zmq_ping( ZPING_TYPE , std::string );

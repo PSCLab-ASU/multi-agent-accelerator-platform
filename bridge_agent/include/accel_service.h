@@ -35,7 +35,8 @@ class accel_service : accel_thread_manager
 {
   public: 
     accel_service();
-    accel_service( std::string, std::string, std::string, std::string, bool );
+    accel_service( std::string, std::string, std::string, 
+                   std::string, bool );
     ~accel_service();
 
     bool check_stop(){ 
@@ -53,6 +54,13 @@ class accel_service : accel_thread_manager
     virtual accel_header get_header( zmq::multipart_t& )       final;
     virtual action_func action_ctrl( accel_utils::accel_ctrl ) final;
  
+    void add_bridge_init( std::function<void()> init_bridge )
+    {
+      _init_bridge = init_bridge;
+    }
+
+    static std::vector<zmq::multipart_t> generate_bridge_init( std::string  );
+
   private:
     void _remove_nexus_index( zmq::multipart_t& req)
     {
@@ -62,7 +70,7 @@ class accel_service : accel_thread_manager
     } 
      
     std::string _generate_bridge_parms();
- 
+    void _fill_rbridge_checklist( std::string, std::vector<host_entry> );
     void _add_nexresp_hdr( uint, zmq::multipart_t& );
     void _index_repositories( std::string, bool bAppend = false );
 
@@ -76,6 +84,7 @@ class accel_service : accel_thread_manager
     API_MODULE(_accel_ninit_)
     API_MODULE(_accel_sinit_)
     API_MODULE(_accel_rinit_)
+    API_MODULE(_accel_binit_)
     API_MODULE(_accel_claim_)
     API_MODULE(_accel_claim_resp_)
     API_MODULE(_accel_test_)
@@ -89,6 +98,8 @@ class accel_service : accel_thread_manager
     std::atomic_bool _stop;
     //spawn bridges if so or not
     bool _spawn_bridges;
+    bool _is_src_bridge;
+
     std::string _job_id; 
     //host file path 
     std::string _host_file;
@@ -110,6 +121,10 @@ class accel_service : accel_thread_manager
     ncache_registry _kernel_registry;
  
     status_agent stat_agent;
+    std::optional< std::function<void()> > _init_bridge;
+    //bridge checklist
+    std::map<std::string, bool> _bridge_checklist;
+    
 };
 
 #endif

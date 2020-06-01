@@ -101,7 +101,7 @@ class anode_manager
       else
         node_addr  = anode_desc.get_addr();
  
-      std::string node_name  = std::getenv("HOSTNAME");
+      std::string node_name  = get_hostname();
       auto node_vec = split_str<'.'>(  node_addr );
 
       if( node_vec.size() > 0 )

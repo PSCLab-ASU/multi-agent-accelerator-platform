@@ -117,6 +117,33 @@ std::string exec(const char* cmd) {
     return result;
 }
 
+
+int send_adhoc_zmsgs( zmq_transport_t transport, std::pair<std::string, std::string> dst,
+                            std::vector<zmq::multipart_t>&& zmsgs )
+{
+  bool ret=false;
+  std::string prefix = g_transport_map.at(transport);
+  std::string addr   = prefix + dst.first + ":" + dst.second; 
+  std::cout << "adhoc addr = " << addr << std::endl; 
+  zmq::context_t ctx;
+  
+  zmq::socket_t sock(ctx, ZMQ_DEALER);
+  std::string id = "turnkey-dlr";
+  sock.setsockopt(ZMQ_IDENTITY, id.c_str(), id.length() );
+  sock.connect( addr );
+
+  //send messages
+  boost::for_each( zmsgs, [&]( zmq::multipart_t& zmsg )
+  {
+    //sending data
+    zmsg.send( sock );
+  });
+
+  return 0;
+}
+
+
+
 std::multimap<std::string, std::vector<std::string> > enumerate_kernels_in_repo(std::string repo_dir)
 {
   //call ls on the passed in repo

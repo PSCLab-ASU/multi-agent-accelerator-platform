@@ -1,6 +1,7 @@
 #include <accel_service.h>
 #include <thread_manager.h>
-#include <boost/range/algorithm/transform.hpp>
+#include <boost/range/algorithm.hpp>
+//#include <boost/range/algorithm/transform.hpp>
 
 #define NUM_THREADS 4
 
@@ -19,6 +20,7 @@ accel_service::accel_service()
   command_set[ctrl::ninit]          = BIND_ACTION(_accel_ninit_);
   command_set[ctrl::sinit]          = BIND_ACTION(_accel_sinit_);
   command_set[ctrl::rinit]          = BIND_ACTION(_accel_rinit_);
+  command_set[ctrl::binit]          = BIND_ACTION(_accel_binit_);
   command_set[ctrl::updt_manifest]  = BIND_ACTION(_accel_updt_manifest_);
   command_set[ctrl::claim]          = BIND_ACTION(_accel_claim_);
   command_set[ctrl::claim_response] = BIND_ACTION(_accel_claim_resp_);
@@ -31,7 +33,8 @@ accel_service::accel_service()
 }
 
 accel_service::accel_service(std::string jobId, std::string hnex, 
-                             std::string host_file, std::string repo, bool spawn_bridges)
+                             std::string host_file, std::string repo, 
+                             bool spawn_bridges )
 : accel_service()
 {
   _job_id = jobId;
@@ -56,6 +59,9 @@ accel_service::accel_service(std::string jobId, std::string hnex,
    
     std::string bridge_parms = _generate_bridge_parms( );
 
+    //fill bridge checklist
+    _fill_rbridge_checklist( get_hostname(), rnex); 
+
     if( spawn_bridges )
       _node_manager = anode_manager( _job_id, hnex, rnex, bridge_parms );
     else
@@ -64,9 +70,7 @@ accel_service::accel_service(std::string jobId, std::string hnex,
   }
   else std::cout <<"xcelerate: no host file!" << std::endl;
 
-  //update state information 
-  stat_agent.update_status(status_agent::app_state::INITIALIZING);
-
+  
 }
 
 accel_service::~accel_service() 
@@ -105,6 +109,27 @@ mpi_return accel_service::submit(zmq::multipart_t && msg)
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
+std::vector<zmq::multipart_t>
+accel_service::generate_bridge_init(std::string jobId  )
+{
+  std::vector<zmq::multipart_t> out;
+  
+  auto method = accel_utils::accel_ctrl::binit;
+  std::string method_str = accel_utils::accel_rolodex.at( method );
+
+  zmsg_builder response(method_str, std::string(PLACEHOLDER), 
+                        generate_random_str() );
+
+  response.add_arbitrary_data( get_hostname() );
+  response.add_arbitrary_data( jobId );  
+  response.finalize();
+
+  out.push_back( std::move(response.get_zmsg() ) );   
+
+  return out;
+}
+
+
 std::string accel_service::_generate_bridge_parms()
 {
   std::string parms="";
@@ -116,6 +141,27 @@ std::string accel_service::_generate_bridge_parms()
  
   return parms;
 }
+
+void accel_service::_fill_rbridge_checklist(std::string hnode, std::vector<host_entry> rnexs)
+{ 
+  //adding home nexues
+  std::cout << "home node = " << hnode << std::endl;
+  _bridge_checklist.emplace(hnode, false);
+  //add remote bridges
+  boost::for_each( rnexs, [&]( auto rnex )
+  {
+    auto mode = rnex.get_node_mode();
+    if( ( mode == node_mode::ADS_ONLY) || 
+        ( mode == node_mode::ADS_ACCEL) )
+    {
+      std::cout << "remote node = " << rnex.get_addr() << std::endl;
+      //node should have/need a bridgea
+      _bridge_checklist.emplace( rnex.get_addr(), false); 
+    } 
+  }); 
+
+}
+
 
 void accel_service::_index_repositories( std::string repos, bool bAppend )
 {
@@ -231,17 +277,58 @@ accel_service::_accel_nexus_redir_(accel_header hdr, zmq::multipart_t&& req)
 }
 
 std::vector<zmq::multipart_t> 
+accel_service::_accel_binit_(accel_header hdr, zmq::multipart_t&& req)
+{ 
+  std::cout << "entering ... : " << __func__ << std::endl;
+  std::vector<zmq::multipart_t> out;
+  zmsg_viewer zmsgv( req );
+  
+  std::string rbridge_hostname = zmsgv.get_section<std::string>(0).front(); 
+  std::string rbridge_jobId    = zmsgv.get_section<std::string>(1).front(); 
+
+  if( rbridge_jobId != _job_id)
+    std::cout << "Bridge intitalization mismatch "<< rbridge_hostname << " != " 
+              << _job_id << std::endl;
+ 
+  auto rbridge_reserv = _bridge_checklist.find( rbridge_hostname );
+  if( rbridge_reserv != _bridge_checklist.end() ) 
+    rbridge_reserv->second = true;
+  else
+    std::cout<< "bridge " << rbridge_hostname << " doesn't exist! "<< std::endl;     
+  
+  bool bridges_rdy = std::all_of(_bridge_checklist.begin(),
+                                 _bridge_checklist.end(), 
+                                 []( auto bridge )
+  {
+    return bridge.second; 
+  });
+
+  if( bridges_rdy )
+    stat_agent.update_status(status_agent::app_state::INITIALIZED);
+  else
+    //update state information 
+    stat_agent.update_status(status_agent::app_state::INITIALIZING);
+  
+  //adding start status message to outbound messages
+  auto[state_chg, stat_msg] = std::move( stat_agent.generate_status_msg() );
+  //attached state if changed
+  if(state_chg ) out += std::move( stat_msg );
+  
+  return out;
+}
+
+std::vector<zmq::multipart_t> 
 accel_service::_accel_sinit_(accel_header hdr, zmq::multipart_t&& req)
 { 
   std::cout << "entering ... : " << __func__ << std::endl;
   std::vector<zmq::multipart_t> out;
-  stat_agent.addr = hdr.requesting_id.value();
+  stat_agent.addr = hdr.requesting_id;
   //update state information 
   stat_agent.update_status(status_agent::app_state::STARTED);
   //adding start status message to outbound messages
   auto[state_chg, stat_msg] = std::move( stat_agent.generate_status_msg() );
   //attached state if changed
-  if( state_chg ) out += std::move( stat_msg );
+  if(state_chg ) out += std::move( stat_msg );
  
   return out;
 }
@@ -260,6 +347,13 @@ accel_service::_accel_ninit_(accel_header hdr, zmq::multipart_t&& req)
 
   if( _node_manager.is_fully_inited() )
   {
+    //checkoff home bridge
+    auto rbridge_reserv = _bridge_checklist.find( get_hostname() );
+    if( rbridge_reserv != _bridge_checklist.end() ) 
+      rbridge_reserv->second = true;
+    else
+      std::cout<< "home bridge " << get_hostname() << " doesn't exist! "<< std::endl;
+     
     using ctrl = client_utils::client_ctrl;
     //run through all the pending messages and return a response
     //rinit pends requests,
@@ -274,19 +368,12 @@ accel_service::_accel_ninit_(accel_header hdr, zmq::multipart_t&& req)
                         ctrl::resp, {}, rid, key );
       client_msg.finalize();
       out.push_back( std::move( client_msg.get_zmsg() ) ); 
+      //send initialization complete to source bridge
     }
-    //update state information 
-    stat_agent.update_status(status_agent::app_state::INITIALIZED);
-  }
-  else
-  {
-    stat_agent.update_status(status_agent::app_state::INITIALIZING);
-  }
 
-  //adding start status message to outbound messages
-  auto[state_chg, stat_msg] = std::move( stat_agent.generate_status_msg() );
-  //attached state if changed
-  if( state_chg ) out += std::move( stat_msg );
+    std::cout << "Sending response to src_bridge... " << std::endl;
+    (*_init_bridge)();
+  }
 
   return out;
 }
@@ -317,8 +404,6 @@ accel_service::_accel_rinit_(accel_header hdr, zmq::multipart_t&& req)
                       ctrl::resp, {},  rid, hdr.tag );
     client_msg.finalize();
     out.push_back( std::move( client_msg.get_zmsg() ) ); 
-    //update state information 
-    stat_agent.update_status(status_agent::app_state::INITIALIZED);
   }
   else
   {
@@ -329,14 +414,8 @@ accel_service::_accel_rinit_(accel_header hdr, zmq::multipart_t&& req)
     _pending_msgs_reg.add_pending_message( generate_random_str(), 
                                            std::move(ipmsg) );
 
-    stat_agent.update_status(status_agent::app_state::INITIALIZING);
   }
   
-  //adding start status message to outbound messages
-  auto[state_chg, stat_msg] = std::move( stat_agent.generate_status_msg() );
-  //attached state if changed
-  if( state_chg ) out += std::move( stat_msg );
-
   return out;
 }
 
@@ -457,6 +536,14 @@ accel_service::_accel_finalize_(accel_header hdr, zmq::multipart_t&& req)
                         ctrl::resp, {},  l_rid, l_key );
       client_msg.finalize();
       out.push_back( std::move( client_msg.get_zmsg() ) ); 
+
+      //update state information 
+      stat_agent.update_status(status_agent::app_state::COMPLETED);
+      //adding start status message to outbound messages
+      auto[state_chg, stat_msg] = std::move( stat_agent.generate_status_msg() );
+      //attached state if changed
+      if(state_chg ) out += std::move( stat_msg );
+
     }
     //add the last finalization
     auto client_msg = client_utils::start_routed_message(
@@ -465,6 +552,7 @@ accel_service::_accel_finalize_(accel_header hdr, zmq::multipart_t&& req)
     client_msg.finalize();
     out.push_back( std::move( client_msg.get_zmsg() ) ); 
 
+ 
     return out;
   }
   else

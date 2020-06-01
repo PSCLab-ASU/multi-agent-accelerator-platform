@@ -33,7 +33,7 @@ int EXPORT MPIX_Init(int *argc, char *** argv)
   std::integral_constant<api_tags, mpi_init> tag;
  
   //get address to accelerator service and jobId (either passed in or random)
-  auto[asa, jobId, host_file, repo, async, bridge] = get_init_parms( argc, argv);
+  auto[asa, jobId, host_file, repo, async, bridge, x, xx] = get_init_parms( argc, argv);
   std::cout << "asa : " << asa << std::endl;
   std::cout << "job_id : " << jobId << std::endl;
   std::cout << "host file : " << host_file << std::endl;

@@ -58,7 +58,8 @@ bool metadata::dst_rank_exists() const
   return (bool) dst_rank;
 }
 
-std::tuple<std::string, std::string, std::string, std::string, bool, bool> 
+std::tuple<std::string, std::string, std::string, 
+           std::string, bool, bool, std::string, std::string> 
 get_init_parms( int * argc, char ***  argv)
 {
 
@@ -78,7 +79,7 @@ get_init_parms( int * argc, char ***  argv)
       //loop through each valid input 
       auto entry = vals.find(key_val[0] );
       if( entry != vals.end() ) entry->second = key_val[1];
-
+      std::cout << "Key=" << key_val[0] << ", Value=" << key_val[1] << std::endl; 
     }
     //find pivot aka "--"
     if( strncmp(d_argv[i], ACCEL_INPUT_PIVOT, 
@@ -86,12 +87,14 @@ get_init_parms( int * argc, char ***  argv)
   
   } 
 
-  auto asa      = vals.at( "--accel_address" );
-  auto job_id   = vals.at( "--accel_job_id" );
-  auto async    = vals.at( "--accel_async" );
-  auto repo     = vals.at( "--accel_repo" );
-  auto hfile    = vals.at( "--accel_host_file" );
-  auto spawn_ba = vals.at( "--accel_spawn_bridge" );
+  auto asa               = vals.at( "--accel_address"      );
+  auto job_id            = vals.at( "--accel_job_id"       );
+  auto async             = vals.at( "--accel_async"        );
+  auto repo              = vals.at( "--accel_repo"         );
+  auto hfile             = vals.at( "--accel_host_file"    );
+  auto spawn_ba          = vals.at( "--accel_spawn_bridge" );
+  auto src_bridge_addr   = vals.at( "--accel_bridge_addr"  );
+  auto src_bridge_port   = vals.at( "--accel_bridge_port"  );
 
   //return argc
   *argc = dash_dash_pos;
@@ -101,7 +104,8 @@ get_init_parms( int * argc, char ***  argv)
 
   return std::make_tuple(asa, job_id, hfile, repo,
                          async=="true"?true:false,
-                         spawn_ba=="true"?true:false );
+                         spawn_ba=="true"?true:false,
+                         src_bridge_addr, src_bridge_port );
 }
 
 bool zmq_ping( ZPING_TYPE ptype, std::string addr)

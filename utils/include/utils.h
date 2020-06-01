@@ -185,8 +185,11 @@ int  no_response_pkt( zmq::multipart_t & );
 
 bool check_retransmission_pkt( const zmq::multipart_t );
 
-int  retransmission_pkt(zmq::multipart_t &);
+int retransmission_pkt(zmq::multipart_t &);
 
+int send_adhoc_zmsgs( zmq_transport_t, std::pair<std::string, std::string>,
+                      std::vector<zmq::multipart_t>&& );                 
+                               
 template< typename K, typename V>
 void print_mmap( std::ostream&, std::multimap<K,V> const &);
 
