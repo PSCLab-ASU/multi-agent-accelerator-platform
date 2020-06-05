@@ -41,7 +41,7 @@ mpi_return mpi_mix_impl::operator()(std::integral_constant<api_tags, mpi_init> t
     //this lock must come after since
     std::lock_guard<std::mutex> guard( *get_shared_mutex() );
     //get rank of current process
-    ulong rank = _mpi_proc_impl->get_current_rank();
+    ulong rank = _mpi_proc_impl->get_global_rank();
     ulong world_sz = _mpi_proc_impl->get_world_size();
     //initializing acceleration service
     std::cout << "is service up : " << _is_service_up << std::endl;
@@ -57,25 +57,33 @@ mpi_return mpi_mix_impl::operator()(std::integral_constant<api_tags, mpi_init> t
 
 mpi_return mpi_mix_impl::operator()(std::integral_constant<api_tags, mpi_finalize> tag, metadata& md )
 {
-  ulong rank = _mpi_proc_impl->get_current_rank();
-  //wait for all clients to reach Finalize
-  _mpi_accel_impl->finalize();
-  //at this point the rutime agent indicated that there will be no
-  //more messages
-  printf("client %i: completed runtime shutdown procedure\n", rank);
-  if( rank == 0)  _mpi_accel_impl->shutdown_runtime_agent();
-  //now stop internal thread
-  stop_driver();
+  ulong global_rank, local_rank;
+  //this lock must come after since
+  {
+    //wait until all ranks arive at finalize
+    _mpi_proc_impl->all_rank_barrier();
+    //get lock for this rank
+    std::lock_guard<std::mutex> guard( *get_shared_mutex() );
+    //fetch local and global rank id
+    global_rank = _mpi_proc_impl->get_global_rank();
+    local_rank = _mpi_proc_impl->get_local_rank();
+    //wait for all clients to reach Finalize
+    _mpi_accel_impl->finalize();
+    //at this point the bridge agent indicated that there will be no
+    //more messages
+    if( local_rank == 0)  _mpi_accel_impl->shutdown_runtime_agent();
+    //now stop internal thread
+    stop_driver();
+  }
   //join wait until all the thread have completed
   check_wait();
   //call proc finalize
   //call MPI finalize to shutdown MPI engine
   _mpi_accel_impl->close_sockets();
   //NO MPI CALLS PASSED THIS POINT
-  std::cout << "client " << rank << " : finalizing MPI" << std::endl;
   _mpi_proc_impl->operator()(tag, md);
   //deallocate socket
-  std::cout << "client " << rank << " : shutingdown" << std::endl;
+  std::cout << "client " << global_rank <<":"<<local_rank << " : shutting down **" << std::endl;
   
   return mpi_return{};
 }
@@ -88,7 +96,7 @@ mpi_return mpi_mix_impl::operator()(std::integral_constant<api_tags, mpi_send>,
   //get claimID 
   //TODO CHECK IF CLAIM is active if not go to backup//////
   auto claimId = _claim_lookup.at( dest );
-  int dst = _mpi_proc_impl->get_current_rank();
+  int dst = _mpi_proc_impl->get_global_rank();
 
   if( datatype == MPIX_COMPOBJ )
   {
@@ -132,8 +140,7 @@ mpi_return mpi_mix_impl::operator()(std::integral_constant<api_tags, mpi_claim>,
                                   int minfo, ulong * new_rank, metadata& md )
 {
   
-  get_lock().lock();
-  {
+    std::lock_guard<std::mutex> guard( *get_shared_mutex() );
     std::string claimId;
 
     std::cout << "entering ... mix_mpi_claim" << std::endl;
@@ -150,8 +157,6 @@ mpi_return mpi_mix_impl::operator()(std::integral_constant<api_tags, mpi_claim>,
     //add claim to registry
     _claim_lookup.insert({ *new_rank, claimId }); 
    
-  }
-  get_lock().unlock();
 
   return mpi_return{};
 }

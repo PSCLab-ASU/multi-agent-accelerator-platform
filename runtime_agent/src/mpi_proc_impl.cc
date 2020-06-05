@@ -148,10 +148,18 @@ bool mpi_proc_impl::is_processor_rank( const ulong& rank) const
   return ( (rank == 0) || (rank < _world_size) );
 }
 
-const ulong& mpi_proc_impl::get_current_rank() const
+const ulong& mpi_proc_impl::get_global_rank() const
 {
-  return _current_rank;
+  return _global_rank;
 }
+
+const ulong& mpi_proc_impl::get_local_rank() const
+{
+
+
+  return _local_rank;
+}
+
 
 const ulong& mpi_proc_impl::get_world_size() const
 {
@@ -175,7 +183,7 @@ mpi_return mpi_proc_impl::operator()(std::integral_constant<api_tags, mpi_init>,
   std::lock_guard<std::mutex> guard( *_mix_mutex );
   std::cout << "entering mpi_proc_impl::mpi_init" << std::endl;
   _world_size = 1;
-  _current_rank = 0;
+  _global_rank = 0;
 
   //error can't pass the pointers in seg fault results
   MPI_Init_thread( argc, argv, MPI_THREAD_MULTIPLE, &provided );
@@ -194,7 +202,17 @@ mpi_return mpi_proc_impl::operator()(std::integral_constant<api_tags, mpi_init>,
     MPI_Comm_size(MPI_COMM_WORLD, &wrld_sz);
     MPI_Comm_rank(MPI_COMM_WORLD, &cur_rank);
     _world_size = wrld_sz;
-    _current_rank = cur_rank;
+    _global_rank = cur_rank;
+
+    MPI_Comm shmcomm;
+    MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0,
+                        MPI_INFO_NULL, &shmcomm);
+
+    int l_rank;
+    MPI_Comm_rank(shmcomm, &l_rank);
+    _local_rank = l_rank;
+    //deallocating communicator
+    MPI_Comm_free(&shmcomm);
     //set initial rank value for child ranks
     zrglobals.init_rank(_world_size);
   }
@@ -205,7 +223,11 @@ mpi_return mpi_proc_impl::operator()(std::integral_constant<api_tags, mpi_init>,
 }
 mpi_return mpi_proc_impl::operator()(std::integral_constant<api_tags, mpi_finalize>, metadata& md)
 {
-  MPI_Finalize();
+
+
+
+
+  int ret = MPI_Finalize();
 
   return mpi_return{};
 }
@@ -325,7 +347,7 @@ ulong mpi_proc_impl::request_new_rank( )
   ulong rank_id;
   std::cout << "building group_id request " << std::endl;
   
-  if( _current_rank ) 
+  if( _global_rank ) 
   {
     mpi_proc_utils::mpi_proc_pkt_builder 
     mproc_builder ( mpi_proc_utils::mpi_proc_mid::get_groupid,

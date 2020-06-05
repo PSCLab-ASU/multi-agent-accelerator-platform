@@ -7,7 +7,7 @@ mpi_accel_impl::mpi_accel_impl(std::string serv_addr, std::string jobId,
                                std::shared_ptr<std::mutex>& mix_mu,
                                std::shared_ptr<std::condition_variable> & mix_cv,
                                std::unique_lock<std::mutex>& mix_lk, bool async )
-: _mix_lk( mix_lk), _mix_mutex( mix_mu ), _mix_cv( mix_cv ), _zsock( _zctx, ZMQ_DEALER)
+: _mix_lk( mix_lk ), _mix_mutex( mix_mu ), _mix_cv( mix_cv ), _zsock( _zctx, ZMQ_DEALER)
 {
 
   using ctrl = client_utils::client_ctrl;

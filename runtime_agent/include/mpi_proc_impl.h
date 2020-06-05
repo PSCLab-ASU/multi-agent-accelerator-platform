@@ -41,7 +41,8 @@ class mpi_proc_impl : public mpi_pv_interface
     void init_thread_components();
     bool is_initialized(){ return (_is_mpi_initialized != 0); }
 
-    const ulong& get_current_rank() const;
+    const ulong& get_global_rank() const;
+    const ulong& get_local_rank() const;
     const ulong& get_world_size() const;
     int get_app_tag_ub();
 
@@ -68,10 +69,12 @@ class mpi_proc_impl : public mpi_pv_interface
     mpi_return _default_action( ACTION_REG_SIGNATURE );
     mpi_return _response_action( ACTION_REG_SIGNATURE );
     mpi_return _get_groupid( ACTION_REG_SIGNATURE );
+    //mpi_return _mark_finalize( ACTION_REG_SIGNATURE );
    
    
     ulong _world_size;
-    ulong _current_rank;
+    ulong _global_rank;
+    ulong _local_rank;
     const int _rank_zero = 0;
     int   _system_tag;
     int   _is_mpi_initialized;

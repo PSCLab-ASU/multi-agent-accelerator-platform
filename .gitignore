@@ -11,4 +11,5 @@ virtualization_agent/nvidia-7.0/debug/
 picoctrl
 unit_test/libmpix.so
 unit_test/hello_world
+unit_test/mpi_test
 unit_test/.nfs*

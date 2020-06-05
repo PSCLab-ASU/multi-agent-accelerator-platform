@@ -3,10 +3,11 @@
 import os, sys, subprocess, time, re, socket
 import string, random, enum, zmq, json
 
-SUDO     =  'sudo -E -u ' + os.getenv('SUDO_USER') + ' ' 
+#SUDO     =  'sudo -E -u ' + os.getenv('SUDO_USER') + ' ' 
 MPIRUN   =  '/usr/local/bin/mpiexec.hydra '
 LDLIB    =  os.getenv('LD_LIBRARY_PATH')
 PATH     =  os.getenv('PATH')
+SUDO     =  'sudo env PATH='+PATH+' LD_LIBRARY_PATH='+LDLIB 
 sys.path += PATH.split(':')
 #test = MPIRUN
 #p_rem_bridge = subprocess.Popen( test, shell=True ) 
@@ -279,7 +280,8 @@ def gen_remote_bridge_cmd(host_arg, mpix_cmd):
     if nargs :
       #if thier are still args then add the host argument in
       new_host_arg =bin_args[0] + ' ' + ','.join(_args)
-      mpiexec += new_host_arg + ' sudo -E ' + cmd
+      mpiexec += new_host_arg + ' ' + cmd
+      #mpiexec += new_host_arg + ' sudo -E ' + cmd
     else:
       #if there arent anymore host host than the home host no args
       mpiexec += 'sudo -E ' + cmd
@@ -304,17 +306,19 @@ def main():
   #mpi_rt_cmd      = mpi_cmd
   mpi_rt_cmd      = append_arg_to_cmd( mpi_cmd, mpi_hosts_args )
   bcnt, remote_mpix_cmd = gen_remote_bridge_cmd(ss_host_arg, local_mpix_cmd) 
+  sudo_loc_mpi = SUDO.split() + local_mpix_cmd
   sudo_rem_mpi = SUDO.split() + remote_mpix_cmd
   sudo_rem_rt  = SUDO.split() + mpi_rt_cmd
+  #sudo_rem_rt  = ("sudo env PATH="+PATH+" LD_LIBRARY_PATH="+LDLIB+ " ").split() +  mpi_rt_cmd
  
-  print ("local mpix_cmd : "  + ' '.join(local_mpix_cmd) + '\n')
+  print ("local mpix_cmd : "  + ' '.join(sudo_loc_mpi ) + '\n')
   print ("remote mpix_cmd : " + ' '.join(sudo_rem_mpi)   + '\n')
   print ("mpi_cmd : "         + ' '.join(sudo_rem_rt)    + '\n')
   if accelerate:
     print("Starting source bridge...\n")
-    print ("local mpix_cmd : "   + ' '.join(local_mpix_cmd) + '\n')
+    print ("local mpix_cmd : "   + ' '.join(sudo_loc_mpi) + '\n')
     #kick off source bridge agent
-    p_loc_bridge = subprocess.Popen( local_mpix_cmd ) 
+    p_loc_bridge = subprocess.Popen( sudo_loc_mpi ) 
     mpix_sync    = sync_mpix_mpi_init(job_id, p_loc_bridge)
     status       = False
     #if thier are any remote bridges that nead to be initied
@@ -338,7 +342,8 @@ def main():
       path = 'PATH=' + PATH
       lib  = 'LD_LIBRARY_PATH='+ LDLIB
       [f_rt_cmd.append(i) if i!='sudo' else f_rt_cmd.extend(list((i,path,lib))) for i in sudo_rem_rt]
-      p_mpi = subprocess.Popen(f_rt_cmd)
+      #p_mpi = subprocess.Popen(f_rt_cmd)
+      p_mpi = subprocess.Popen(sudo_rem_rt)
     else:
       if bcnt: 
         print("Error with initialization of src bridge")
@@ -347,10 +352,22 @@ def main():
       mpix_aa_ctrl.cleanup()
       # make a connection to the nexus ctrl should send a 
       # signal to terminate all bridges with the jobId and free resources and claims
+      #wair for source bridge
+    if bcnt : 
+      p_rem_bridge.wait() #wait for remote bridges to complete 
+      print('remote bridges complete')
+    p_loc_bridge.wait()   #wait for local_Bridge to complete
+    print('source bridges complete')
+    #p_mpi.kill()
+    p_mpi.wait()          #wait for application to finish
+    print('ADS Threads are complete')
+
   else :
     print("Running Normal MPI...\n")
     #kick off mpi process
     p_mpi = subprocess.Popen( sudo_rem_rt )
+    p_mpi.wait()
+
      
 if __name__ == "__main__":
     main()

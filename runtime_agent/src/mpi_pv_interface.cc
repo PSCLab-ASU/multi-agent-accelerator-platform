@@ -21,6 +21,7 @@ void mpi_pv_interface::thread_main()
     {
       //aquire lock for application priority
       std::lock_guard<std::mutex> guard(*_mu);
+      if( _stop_driver.load() ) break;
       //update system state
       system_update();
 
