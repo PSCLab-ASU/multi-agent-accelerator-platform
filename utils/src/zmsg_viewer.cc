@@ -49,7 +49,7 @@ zmsg_viewer<Ts...>::get_memblk( uint section_index)
   std::tuple<ulong, ulong, ulong, size_t, zmq::message_t> out;
   ushort mtype;
   ulong  len;
- 
+  ulong vector_size;
   zmq::multipart_t copy = _msg.clone();
 
   //read header information
@@ -61,8 +61,9 @@ zmsg_viewer<Ts...>::get_memblk( uint section_index)
 
   auto read_section = [&](bool valid){
     mtype = copy.poptyp<ushort>();
-    len   = copy.poptyp<ulong>();
-
+    len   = (mtype == (ushort)zmsg_section_type::ZMSG)? 4 : copy.poptyp<ulong>();
+    vector_size = (mtype == (ushort)zmsg_section_type::ZMSG)? copy.poptyp<ulong>() : len;
+   
     std::list<std::add_pointer_t<decltype(copy)> > ll(len, &copy );
     if( !valid )
       std::for_each(ll.begin(), ll.end(), [&](zmq::multipart_t* msg){ msg->pop(); } );     
@@ -75,7 +76,7 @@ zmsg_viewer<Ts...>::get_memblk( uint section_index)
       auto  data      = std::move(copy.pop());      
       //set the output
 
-      out = std::make_tuple(b_sign, b_type, type_size, len, std::move(data) );
+      out = std::make_tuple(b_sign, b_type, type_size, vector_size, std::move(data) );
 
     }    
   };//end of lambda: read_section
