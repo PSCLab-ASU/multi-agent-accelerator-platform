@@ -174,6 +174,7 @@ void device_services::operator()(single_q& q1, single_q& q2,
     _process_rpc( std::move( dm->try_read() ) );
     //heart beat device manager
     dm->process_single();
+    dm->heartbeat();
     //check shutdown requests
     if ( is_shutdown() )
     {
@@ -187,6 +188,7 @@ void device_services::operator()(single_q& q1, single_q& q2,
         _process_rpc( std::move( dm->try_read() ) );
         //heart beat device manager
         dm->process_single();
+        dm->heartbeat();
       }
       break;
     }

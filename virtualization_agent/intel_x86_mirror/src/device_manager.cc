@@ -31,6 +31,12 @@ device_manager::device_manager()
 
 }
 
+void device_manager::heartbeat()
+{
+  std::cout << "entering device_manager::heartbeat()" << std::endl;
+
+}
+
 device_manager::return_type device_manager::_pw_add ( header_type hdr, input_type input)
 {
   std::cout << "---dm->add..." << std::endl;

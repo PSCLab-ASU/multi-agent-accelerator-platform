@@ -36,6 +36,12 @@ device_manager::device_manager()
   _add_kernel( "00000",   &device_manager::_hello_world);
 }
 
+void device_manager::heartbeat()
+{
+  std::cout << "entering device_manager::heartbeat()" << std::endl;
+
+}
+
 device_manager::return_type device_manager::_matrix_mult ( header_type hdr, input_type input)
 {
   std::cout << "---dm->matrix_mult..." << std::endl;

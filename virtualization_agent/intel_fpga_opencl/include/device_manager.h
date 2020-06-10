@@ -16,6 +16,7 @@ class device_manager : public base_device_manager
     using return_type = base_device_manager::CommandType::result_type;
 
     device_manager();
+    void heartbeat();
 
   private:
 
