@@ -138,8 +138,7 @@ device_manager::return_type device_manager::_matrix_mult ( header_type hdr, inpu
   status = clBuildProgram(program, 0, NULL, "", NULL, NULL);
   checkError(status, "Failed to build program");
 
-
-	cl_command_queue queue = clCreateCommandQueue(context, device[0], CL_QUEUE_PROFILING_ENABLE, &status);
+  cl_command_queue queue = clCreateCommandQueue(context, device[0], CL_QUEUE_PROFILING_ENABLE, &status);
   checkError(status, "Failed to create command queue");
   printf("Command queue created successfully\n");
 
