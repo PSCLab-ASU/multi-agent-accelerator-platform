@@ -17,7 +17,7 @@ int main(const int argc, const char *argv[])
   std::string claim_id  ="claim";
   std::string n_args    ="nargs";
   std::string stim_file ="input_file";
-  int in_args           = 1;
+  int in_args           = 0;
   int status            = -1;
   bool repeat           = true;
 
@@ -40,7 +40,7 @@ int main(const int argc, const char *argv[])
   pub.bind(pub_addr);
   
   in_args = atoi( n_args.c_str() );
-
+ 
   std::cout << "Launch pico service, then press any key to continue..." << std::endl;
 
   std::cin.ignore();

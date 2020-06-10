@@ -21,8 +21,7 @@ pico_ctrl::pico_ctrl()
 pico_ctrl::pico_ctrl(zmq::socket_t * rtr,
                      zmq::socket_t * pub,
                      std::string claim_id, 
-                     std::string stim_file, 
-                     int nargs) 
+                     std::string stim_file, int nargs) 
 : pico_ctrl()
 {
   rtr_zsock = rtr;
@@ -72,7 +71,6 @@ int pico_ctrl::_sendrecv_command(zmq::multipart_t& szmsg, zmq::multipart_t& rzms
   _recv( rzmsg );
   return 0;
 }
-
 
 int pico_ctrl::_rollcall( )
 {
@@ -144,7 +142,6 @@ int pico_ctrl::_picctl_sample_()
     //add it to the message
     zbmsg.add_memblk(true, 1, sizeof(float), row.data(), len); 
   } );
-
 
   //send message
   zmq::multipart_t rzmsg;

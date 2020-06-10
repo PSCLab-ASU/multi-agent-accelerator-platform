@@ -21,14 +21,13 @@ pico_ctrl::pico_ctrl()
 pico_ctrl::pico_ctrl(zmq::socket_t * rtr,
                      zmq::socket_t * pub,
                      std::string claim_id, 
-                     std::string stim_file, 
-                     int nargs) 
+                     std::string stim_file, int nargs) 
 : pico_ctrl()
 {
   rtr_zsock = rtr;
   pub_zsock = pub;
 
-  std::string name = "pico_ctrl";
+  std::string name = "pico_ctrl_matrix_mult";
   //save the stim file
   defintion_file = stim_file;
   //same the sample claimID
@@ -73,6 +72,9 @@ int pico_ctrl::_sendrecv_command(zmq::multipart_t& szmsg, zmq::multipart_t& rzms
   return 0;
 }
 
+float rand_float() {
+  return float(rand()) / float(RAND_MAX) * 20.0f - 10.0f;
+}
 
 int pico_ctrl::_rollcall( )
 {
@@ -117,6 +119,7 @@ int pico_ctrl::_picctl_sample_()
 {
   std::cout << "entering " << __func__ << std::endl;
   using vfloat = std::vector<float>;
+  using vint = std::vector<int>;
 
   std::string key = generate_random_str();
   auto zbmsg = pico_utils::start_request_message( pico_utils::pico_ctrl::send, key );
@@ -127,23 +130,61 @@ int pico_ctrl::_picctl_sample_()
   //add number of args
   zbmsg.add_arbitrary_data((ulong) n_args );
 
-  auto matrix = std::vector<vfloat>(n_args); 
- 
-  
-  std::for_each(matrix.begin(), matrix.end(), [&] ( auto& row )
+  auto matrix_data = std::vector<vfloat>(2); 
+  auto matrix_dim = std::vector<vint>(2); 
+
+  int k=0;
+  int A_height = 64;
+  int A_width = 64;
+  int B_height = A_width;
+  int B_width = 64;
+  size_t lenA = A_height*A_width;
+  size_t lenB = B_height*B_width;
+
+  //Add Matrices data to zmsg
+  std::for_each(matrix_data.begin(), matrix_data.end(), [&] ( auto& row )
   {
-    std::random_device rd;  
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<> dis(0., 1.0);
-    size_t len = 100*dis(gen) + 1; 
-    //randomly fill in data
-    std::cout << "len = " << len << std::endl;
-    size_t i = len;
-    while( i-- ) { row.push_back( dis(gen) ); }
-    std::cout << "row.length() = " << row.size() << std::endl;
-    //add it to the message
-    zbmsg.add_memblk(true, 1, sizeof(float), row.data(), len); 
-  } );
+    if(k==0)
+    {
+       std::cout << "len = " << lenA << std::endl;
+       size_t i = lenA;
+       while( i-- ) { row.push_back( rand_float() ); }
+       zbmsg.add_memblk(true, 0, sizeof(float), row.data(), lenA); 
+    }
+
+    if(k==1)
+    {
+       std::cout << "len = " << lenB << std::endl;
+       size_t i = lenB;
+       while( i-- ) { row.push_back( rand_float() ); }
+       zbmsg.add_memblk(true, 0, sizeof(float), row.data(), lenB); 
+    }
+
+    k++;
+
+  });
+
+
+  //Add Matrices dimensions to zmsg
+  k=0;
+  std::for_each(matrix_dim.begin(), matrix_dim.end(), [&] ( auto& row )
+  {
+    if(k==0)
+    {
+       std::cout << "len = 1" << std::endl;
+       row.push_back(A_width);
+       zbmsg.add_memblk(false, 1, sizeof(int), row.data(), 1); 
+    }
+
+    if(k==1)
+    {
+       std::cout << "len = 1" << std::endl;
+       row.push_back(B_width);
+       zbmsg.add_memblk(false, 1, sizeof(int), row.data(), 1); 
+    }
+
+    k++;
+  });
 
 
   //send message
