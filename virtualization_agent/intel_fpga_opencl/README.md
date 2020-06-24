@@ -27,7 +27,7 @@ make virtualization_agent
 
 Running:   
 change to the following directory: multi-agent-accelerator-platform/virtualization_agent/intel_fpga_opencl/debug/bin  
-copy compiled kernels to this directory from the following shared drive location: /archive-t2/user/mquraish/kernels  
+copy compiled kernels to this directory from the following shared drive location: /archive-t2/user/mquraish/kernels/bin/  
 switch to super user: sudo su  
 source /home/tools/altera/setup_scripts/Intel_Setup_19.1-pro_nalla_385a.csh  
 
