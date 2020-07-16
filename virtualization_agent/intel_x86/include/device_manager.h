@@ -20,9 +20,8 @@ class device_manager : public base_device_manager
   private:
 
     return_type _default ( header_type, input_type );
-    return_type _pw_add  ( header_type, input_type );
-    return_type _pw_mult ( header_type, input_type );
-    return_type _pw_div  ( header_type, input_type );
+	return_type _pw_gemm ( header_type, input_type );
+	return_type _pw_add ( header_type, input_type );
 
 };
 
