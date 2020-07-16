@@ -31,7 +31,7 @@ CC       := ${CC.${COMPILER}}
 LD       := ${LD.${COMPILER}}
 AR       := ${AR.${COMPILER}}
 
-MKLROOT := /opt/intel/compilers_and_libraries_2020.1.217/linux/mkl
+MKLROOT := /archive-t2/Design/fpga_computing/wip/depends/mkl/
 LDFLAGS.common  := -lstdc++ -lpthread -lzmq -lboost_system -lboost_thread -lboost_iostreams -lOpenCL -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_gnu_thread.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lgomp -lpthread -lm -ldl
 LDFLAGS.debug   := $(LDFLAGS.common)
 LDFLAGS.release := $(LDFLAGS.common)
