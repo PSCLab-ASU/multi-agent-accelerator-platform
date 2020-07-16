@@ -33,7 +33,6 @@ device_manager::device_manager()
 	_add_kernel( "*",       &device_manager::_default    ); 
   _add_kernel( "0",       &device_manager::_pw_gemm  );
   _add_kernel( "1",       &device_manager::_pw_add  );
-
 }
 
 void device_manager::heartbeat()
@@ -53,18 +52,9 @@ device_manager::return_type device_manager::_pw_gemm ( header_type hdr, input_ty
 
   for(int i=0; i<num_in_args; i++){
     payload_data.push_back(in_payload.pop_arg());
-  }
+  }	
 	
-  // for(int i=num_in_args-1; i>=0; i--){
-     // auto[header, data] = payload_data[i];
-     // auto[sign_t, data_t, t_size, size] = header;
-
-     // in_size.push_back((unsigned)(size*t_size));
-     // in_type_size.push_back((unsigned)t_size);
-	 // printf("\n%d\n", size);
-  // }	
-	
-	int dim[3];
+  int dim[3];
 
   for(int i = 2; i>=0; i--) 
   {
@@ -91,32 +81,28 @@ device_manager::return_type device_manager::_pw_gemm ( header_type hdr, input_ty
   }
   
   
-  	float alpha, beta;
+  float alpha, beta;
+  alpha = 1.0; beta = 0.0; 
+	
+  float* out_buf= (float *)mkl_malloc( dim[0] * dim[2] * sizeof( float ), 64 );
+	
+  double s_initial, s_end, s_elapsed;
+		
+  s_initial = dsecnd();
+  for (int r = 0; r < LOOP_COUNT; r++) {
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, dim[0], dim[2], dim[1], alpha, in_buf[0], dim[1], in_buf[1], dim[2], beta, out_buf, dim[2]);
+  }
+	
+  s_end = dsecnd();
+  s_elapsed = (s_end - s_initial) / LOOP_COUNT;
 
-	alpha = 1.0; beta = 0.0; 
-	
-	float* out_buf= (float *)mkl_malloc( dim[0] * dim[2] * sizeof( float ), 64 );
-	
-	double s_initial, s_end, s_elapsed;
-	
-	//timestamp here
-	
-	s_initial = dsecnd();
-    for (int r = 0; r < LOOP_COUNT; r++) {
-		cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, dim[0], dim[2], dim[1], alpha, in_buf[0], dim[1], in_buf[1], dim[2], beta, out_buf, dim[2]);
-    }
-	
-	s_end = dsecnd();
-    s_elapsed = (s_end - s_initial) / LOOP_COUNT;
-//timestamp
-    printf (" == Matrix multiplication using Intel(R) MKL dgemm completed == \n"
-            " == at %.5f milliseconds == \n\n", (s_elapsed * 1000));  
+  printf (" == Matrix multiplication using Intel(R) MKL dgemm completed == \n"
+    " == at %.5f milliseconds == \n\n", (s_elapsed * 1000));  
 
   return_type output;
   recv_payload rp;  
 
   void * results = nullptr;
-  // bool valid_type = true;
 
   rp.set_tid( input.first );
   rp.set_nargs( 1 );
@@ -128,12 +114,11 @@ device_manager::return_type device_manager::_pw_gemm ( header_type hdr, input_ty
 
   output.push_back( std::move( rp ) );
   
-	mkl_free(in_buf[0]);
-    mkl_free(in_buf[1]);
-    mkl_free(out_buf);
+  mkl_free(in_buf[0]);
+  mkl_free(in_buf[1]);
+  mkl_free(out_buf);
 
   return output;
- 
 }
 
 device_manager::return_type device_manager::_default ( header_type hdr, input_type input)
