@@ -3,6 +3,7 @@ PICO Controller for MKL Matrix Multiplication
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 - Building:
 > export MKLROOT=/archive-t2/Design/fpga_computing/wip/depends/mkl/
+
 > gcc -O3 -g utils/src/*.cc virtualization_agent/common/api/src/pico_utils.cc virtualization_agent/common/ctrl/src/pico_ctrl.cc virtualization_agent/common/ctrl/src/pico_ctrl_main.cc -o picoctrl -I../depends/boost/include -Ivirtualization_agent/common/api/include -Iaccelerator_agent/include -Iutils/include -Ivirtualization_agent/common/ctrl/include/ -Ivirtualization_agent/common/include/ -lstdc++ -std=c++2a -lzmq  -DMKL_ILP64 -m64 -I${MKLROOT}/include  -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_gnu_thread.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lgomp -lpthread -lm -ldl
 
 - Running (sudo mode required):  
