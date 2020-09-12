@@ -31,7 +31,8 @@ CC       := ${CC.${COMPILER}}
 LD       := ${LD.${COMPILER}}
 AR       := ${AR.${COMPILER}}
 
-LDFLAGS.common  := -lstdc++ -lzmq -lpthread -lzmq -lboost_system -lboost_thread -lboost_iostreams
+MKLROOT := /archive-t2/Design/fpga_computing/wip/depends/mkl/
+LDFLAGS.common  := -lstdc++ -lpthread -lzmq -lboost_system -lboost_thread -lboost_iostreams -lOpenCL -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_gnu_thread.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lgomp -lpthread -lm -ldl
 LDFLAGS.debug   := $(LDFLAGS.common)
 LDFLAGS.release := $(LDFLAGS.common)
 LDFLAGS         := ${LDFLAGS.${BUILD}}
@@ -40,7 +41,7 @@ LDLIBS          :=
 # tHe ../api/include folder should not be here the API build should be separate
 # The internal agent shouldn't use anything from this API TBD
 COMPILE.CXX = ${CXX} -c $(patsubst $(DEST)/%.o, $(code_base)%.cc, $@) -o $@ $(addprefix -I, $(sort $(dir $(filter %.h, $^)))) ${CXXFLAGS}
-COMPILE2.CXX = ${CXX} -c $(patsubst $(DEST)/virtualization_agent/%.o, $(PMAIN)%.cc, $@) -o $@ $(addprefix -I, $(sort $(dir $(filter %.h, $^)))) ${CXXFLAGS}
+COMPILE2.CXX = ${CXX} -c $(patsubst $(DEST)/virtualization_agent/%.o, $(PMAIN)%.cc, $@) -o $@ $(addprefix -I, $(sort $(dir $(filter %.h, $^)))) ${CXXFLAGS} -DMKL_ILP64 -m64 -I$(MKLROOT)/include
 LINK.EXE = ${LD} $(shell find $(DEST) -name '*.o') -o $(DEST)/bin/$(BINARY_NAME) $(LDFLAGS) $(LDLIBS)
 ##############################################################################################################
 #main entry point

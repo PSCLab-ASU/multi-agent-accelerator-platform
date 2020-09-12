@@ -6,13 +6,9 @@
 #include <zmsg_builder.h>
 #include <random>
 
-#include "mkl.h"
-
 #define BIND_ACTION(action)            \
   std::bind(&pico_ctrl::action,\
             this);
-			
-double s_initial, s_elapsed;
 
 pico_ctrl::pico_ctrl()
 {
@@ -25,8 +21,7 @@ pico_ctrl::pico_ctrl()
 pico_ctrl::pico_ctrl(zmq::socket_t * rtr,
                      zmq::socket_t * pub,
                      std::string claim_id, 
-                     std::string stim_file, 
-					 int nargs) 
+                     std::string stim_file, int nargs) 
 : pico_ctrl()
 {
   rtr_zsock = rtr;
@@ -122,11 +117,7 @@ int pico_ctrl::_picctl_default_()
 
 int pico_ctrl::_picctl_sample_()
 {
-	
   std::cout << "entering " << __func__ << std::endl;
-  
-  s_initial = dsecnd();
-  
   using vfloat = std::vector<float>;
   using vint = std::vector<int>;
 
@@ -140,17 +131,15 @@ int pico_ctrl::_picctl_sample_()
   zbmsg.add_arbitrary_data((ulong) n_args );
 
   auto matrix_data = std::vector<vfloat>(2); 
-  auto matrix_dim = std::vector<vint>(3); 
-
-  int A_height = 1000;
-  int A_width = 1000;
-  int B_height = A_width;
-  int B_width = 1000;
-  
-  size_t lenA = A_height * A_width;
-  size_t lenB = B_height * B_width;
+  auto matrix_dim = std::vector<vint>(2); 
 
   int k=0;
+  int A_height = 64;
+  int A_width = 64;
+  int B_height = A_width;
+  int B_width = 64;
+  size_t lenA = A_height*A_width;
+  size_t lenB = B_height*B_width;
 
   //Add Matrices data to zmsg
   std::for_each(matrix_data.begin(), matrix_data.end(), [&] ( auto& row )
@@ -172,6 +161,7 @@ int pico_ctrl::_picctl_sample_()
     }
 
     k++;
+
   });
 
 
@@ -182,18 +172,11 @@ int pico_ctrl::_picctl_sample_()
     if(k==0)
     {
        std::cout << "len = 1" << std::endl;
-       row.push_back(A_height);
+       row.push_back(A_width);
        zbmsg.add_memblk(false, 1, sizeof(int), row.data(), 1); 
     }
 
     if(k==1)
-    {
-       std::cout << "len = 1" << std::endl;
-       row.push_back(A_width);
-       zbmsg.add_memblk(false, 1, sizeof(int), row.data(), 1); 
-    }
-	
-    if(k==2)
     {
        std::cout << "len = 1" << std::endl;
        row.push_back(B_width);
@@ -210,11 +193,6 @@ int pico_ctrl::_picctl_sample_()
 
   std::cout << "recv_msg : " << rzmsg << std::endl;
 
-  s_elapsed = dsecnd() - s_initial;
-  printf (" == Data tranmission through VA and kernel exectution completed == \n"
-          " == at %.5f milliseconds == \n\n", (s_elapsed * 1000));
-    
-
   return 0;
 }
 
@@ -225,3 +203,4 @@ int pico_ctrl::_picctl_fsample_()
 
   return 0;
 }
+

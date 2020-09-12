@@ -3,6 +3,7 @@
 
 #ifndef DEVMGR
 #define DEVMGR
+typedef unsigned char BYTE;
 
 class device_manager : public base_device_manager
 {
@@ -19,10 +20,9 @@ class device_manager : public base_device_manager
 
   private:
 
-    return_type _default ( header_type, input_type );
-	return_type _pw_gemm ( header_type, input_type );
-	return_type _pw_add ( header_type, input_type );
-
+    return_type _default      ( header_type, input_type );
+    return_type _matrix_mult  ( header_type, input_type );
+    return_type _hello_world  ( header_type, input_type );
 };
 
 #endif
