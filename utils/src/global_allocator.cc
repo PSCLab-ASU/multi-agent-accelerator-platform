@@ -1,6 +1,7 @@
 #include <global_allocator.h>
-#include <boost/range/algorithm/find_if.hpp>
-#include <boost/range/algorithm/remove_if.hpp>
+#include <boost/range/algorithm.hpp>
+//#include <boost/range/algorithm/find_if.hpp>
+//#include <boost/range/algorithm/remove_if.hpp>
 #include <errno.h>
 
 ////////////////////////////////////////////////////////////////////////////////////////

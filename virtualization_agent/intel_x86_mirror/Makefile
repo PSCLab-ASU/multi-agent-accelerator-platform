@@ -31,7 +31,7 @@ CC       := ${CC.${COMPILER}}
 LD       := ${LD.${COMPILER}}
 AR       := ${AR.${COMPILER}}
 
-LDFLAGS.common  := -lstdc++ -lzmq -lpthread -lzmq -lboost_system -lboost_thread -lboost_iostreams -lOpenCL
+LDFLAGS.common  := -lstdc++ -lzmq -lpthread -lzmq -lboost_system -lboost_thread -lboost_iostreams 
 LDFLAGS.debug   := $(LDFLAGS.common)
 LDFLAGS.release := $(LDFLAGS.common)
 LDFLAGS         := ${LDFLAGS.${BUILD}}

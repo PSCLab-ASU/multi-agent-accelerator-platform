@@ -54,6 +54,8 @@ class zmsg_builder {
 
   zmsg_builder& add_memblk(int, int, int, const void*, size_t  );
 
+  zmsg_builder& add_memref(int, int, int, int, std::string, size_t  );
+
   //adds the complete clause at the end
   zmsg_builder& finalize();
 

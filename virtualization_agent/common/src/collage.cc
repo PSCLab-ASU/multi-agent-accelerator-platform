@@ -3,6 +3,7 @@
 #include <nexus_utils.h>
 #include <type_traits>
 
+
 collage::collage() 
 {
   
@@ -21,8 +22,9 @@ collage::collage()
                                                   &collage::_col_idn_resource_resp);
   command_set[ctrl::send]           = bind_action(&collage::_col_send_req,
                                                   &collage::_col_send_resp);
-  //command_set[ctrl::recv]           = bind_action(nullptr,
-  //                                                &collage::_col_recv_resp);
+
+  _galloc = global_allocator::get_global_allocator();
+  
 }
 
 void collage::print_header()

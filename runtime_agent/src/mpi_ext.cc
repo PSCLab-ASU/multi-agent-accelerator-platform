@@ -104,6 +104,29 @@ int EXPORT MPIX_Recv(void * buf, int cnt, MPI_Datatype dt, int source, int mpi_t
   return 0;
 }
 
+int EXPORT MPIX_Alloc_mem(MPI_Aint size, MPI_Info info, void ** baseptr)
+{
+
+  std::integral_constant<api_tags, mpi_alloc_mem> tag;
+  metadata meta{0, false};
+  
+  _general_router(meta, tag, size, info, baseptr );
+
+  return 0;
+}
+
+int EXPORT MPIX_Free_mem( void ** baseptr)
+{
+
+  std::integral_constant<api_tags, mpi_free_mem> tag;
+  metadata meta{0, false};
+  
+  _general_router(meta, tag, baseptr );
+
+  return 0;
+}
+
+
 //Complete
 int EXPORT MPIX_Comm_rank(MPI_Comm comm, int *rank)
 {

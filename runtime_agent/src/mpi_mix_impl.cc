@@ -161,3 +161,14 @@ mpi_return mpi_mix_impl::operator()(std::integral_constant<api_tags, mpi_claim>,
   return mpi_return{};
 }
 
+mpi_return mpi_mix_impl::operator()(std::integral_constant<api_tags, mpi_alloc_mem>, int size, int info, void ** baseptr,  metadata& md )
+{
+  std::lock_guard<std::mutex> guard( *get_shared_mutex() );
+  return mpi_return{};
+}
+
+mpi_return mpi_mix_impl::operator()(std::integral_constant<api_tags, mpi_free_mem>, void ** baseptr, metadata& md )
+{
+  std::lock_guard<std::mutex> guard( *get_shared_mutex() );
+  return mpi_return{};
+}

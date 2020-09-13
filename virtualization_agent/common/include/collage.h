@@ -3,6 +3,7 @@
 #include "device_services.h"
 #include "system_services.h"
 #include "shmem_store.h"
+#include "global_allocator.h"
 
 #ifndef COLLAGE
 #define COLLAGE
@@ -108,6 +109,8 @@ class collage
     std::shared_ptr<pico_cfg> _pcfg;
     //pktgen interface
     std::shared_ptr<shmem_store::pkt_gen_ts> _pktgen;
+    //global allocator
+    std::shared_ptr<global_allocator> _galloc;
 };
 
 

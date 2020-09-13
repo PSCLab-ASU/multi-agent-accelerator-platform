@@ -1,0 +1,12 @@
+{
+  "host_list": [{"host_name" :"", "state" : "", "dns" : "", "agents" : ["$BASE_CFG", "$BASE_EXT"]  },
+                {"host_name" :"", "state" : "", "dns" : "", "agents" : "$BASE_CFG"  }],
+
+  "agent_list" : [ {"key" : "aa", "path" : "/archive-t2/Design/fpga_computing/wip/multi-agent-accelerator-platform", "binary_name" : "accelerator_agent.bin", "ctrl" : "aa_ctrl" , "args" : ["","",""], "machine_usage" : "" } ],
+
+  "ctrl_list" : [ {"key" : "aa_ctrl",  "path" : "/archive-t2/Design/fpga_computing/wip/multi-agent-accelerator-platform", "binary_name" : "accelerator_agent.bin",  "machine_usage" : "" } ] 
+
+  "globals_vars" : [ {"name" : "BASE_CFG", "value" : ["aa", "intel_x86"], "join_delim" : "," }, 
+                     {"name" : "BASE_EXT", "value" : ["aa", "intel_x86", "inte_x86_mirror"], "join_delim" : "," } ] 
+
+}

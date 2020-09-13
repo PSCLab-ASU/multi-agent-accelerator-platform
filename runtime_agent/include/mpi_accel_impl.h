@@ -6,7 +6,7 @@
 #include <mpi_accel_utils.h>
 #include <accel_utils.h>
 #include <mpi_pending_msg.h>
-
+#include <global_allocator.h>
 
 #ifndef MPIACCEL_IMPL
 #define MPIACCEL_IMPL
@@ -138,6 +138,8 @@ class mpi_accel_impl
    std::vector<claim_info> _claim_registry;
    //pending messages registry
    mpi_pending_msg_registry _pmsg_registry;
+   //global allocator
+   std::shared_ptr<global_allocator> _galloc;
 };
 
 #endif

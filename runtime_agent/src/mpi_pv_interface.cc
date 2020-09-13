@@ -4,7 +4,9 @@ mpi_pv_interface::mpi_pv_interface()
 : _stop_driver(false),
   _async_enabled(false),
   _mu( std::make_shared<std::mutex>() ),
-  _lk( std::unique_lock(*_mu, std::defer_lock) ){}
+  _lk( std::unique_lock(*_mu, std::defer_lock) ),
+  _global_allocator( global_allocator::get_global_allocator() )
+{}
 
 mpi_pv_interface::mpi_pv_interface( bool async)
 : _stop_driver(false),
@@ -74,4 +76,9 @@ void mpi_pv_interface::own_thread( std::thread&& thread )
 void mpi_pv_interface::set_current_meta( const metadata& md)
 {
   _meta = md; 
+}
+
+std::shared_ptr<global_allocator> mpi_pv_interface::get_global_allocator()
+{
+  return global_allocator::get_global_allocator();
 }

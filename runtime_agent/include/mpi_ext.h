@@ -16,6 +16,10 @@ extern "C"
   int MPIX_Send(const void *, int, MPI_Datatype, int, int, MPI_Comm );
   int MPIX_Recv(void *,       int, MPI_Datatype, int, int, MPI_Comm, MPI_Status* );
   int MPIX_Claim (const char *, MPIX_Backup_Function, MPI_Info, ulong *);
+  int MPIX_Alloc_mem(MPI_Aint, MPI_Info, void **);
+  int MPIX_Free_mem(void ** );
+
+
   
   //backlisted
   int MPIX_Comm_rank(MPI_Comm, int *);

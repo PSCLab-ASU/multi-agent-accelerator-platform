@@ -7,7 +7,8 @@ mpi_accel_impl::mpi_accel_impl(std::string serv_addr, std::string jobId,
                                std::shared_ptr<std::mutex>& mix_mu,
                                std::shared_ptr<std::condition_variable> & mix_cv,
                                std::unique_lock<std::mutex>& mix_lk, bool async )
-: _mix_lk( mix_lk ), _mix_mutex( mix_mu ), _mix_cv( mix_cv ), _zsock( _zctx, ZMQ_DEALER)
+: _galloc( global_allocator::get_global_allocator() ), _mix_lk( mix_lk ), 
+  _mix_mutex( mix_mu ), _mix_cv( mix_cv ), _zsock( _zctx, ZMQ_DEALER)
 {
 
   using ctrl = client_utils::client_ctrl;
@@ -92,8 +93,8 @@ void mpi_accel_impl::_process_recv_message(mpi_recv_pmsg& recv,  MPI_ComputeObj*
     
     for(auto i : std::ranges::views::iota((ulong)0, num_args) ) 
     {
-       cobj->types[i]   = *(zmsg.at(9+i*6).data<ulong>());
        cobj->lengths[i] = *(zmsg.at(7+i*6).data<ulong>());
+       cobj->types[i]   = *(zmsg.at(9+i*6).data<ulong>());
        cobj->data[i]    = zmsg.at(11+i*6).data();
        //std::cout << "Output " << i << " recieved " << cobj->lengths[i] << std::endl;
        //for(auto j : std::ranges::views::iota(0, cobj->lengths[i] ) )
@@ -216,12 +217,13 @@ mpi_return mpi_accel_impl::accel_claim( std::string falias,
 mpi_return mpi_accel_impl::accel_send(int dst, std::string claimId, const MPI_ComputeObj* cobj, int cnt, int tag)
 {
   std::cout << "entering ... " << __func__ << std::endl;
-  std::string key;
+  std::string msg_key, buffer_key;
   int type_size=0;
   ushort nargs = cobj->get_nargs();
   uint   *  types;
   size_t *  lens;
   void  **  data; 
+  void   *  g_ptr;
 
   if( cnt == 1 )
   {
@@ -230,7 +232,7 @@ mpi_return mpi_accel_impl::accel_send(int dst, std::string claimId, const MPI_Co
     lens  = cobj->get_lengths();
     data  = cobj->get_data(); 
 
-    auto zmsgb = _start_message( accel_utils::accel_ctrl::send, key);
+    auto zmsgb = _start_message( accel_utils::accel_ctrl::send, msg_key);
     //building message
     zmsgb.add_arbitrary_data(claimId);
     //add number of args
@@ -238,22 +240,33 @@ mpi_return mpi_accel_impl::accel_send(int dst, std::string claimId, const MPI_Co
 
     std::cout << "Adding memory blocks " << std::endl;
     for(int i =0; i < nargs; i++)
-    {  
-      std::cout << i<<") Adding memory blocks " << std::endl;
-      auto[b_signed, b_type] = g_mpi_type_conv.at(types[i]);
-      MPI_Type_size(types[i], &type_size);
-      zmsgb.add_memblk(b_signed, b_type, type_size, 
-                       data[i], lens[i] );
+    { 
+
+      auto[buffer_type, b_signed, b_type, mpi_type] = g_mpi_type_conv.at(types[i]);
+      //std::string child_id = (buffer_type==SYSTEM_BUFFER)?std::to_string( ((int*) data[i])[0] ):std::string("");
+
+      MPI_Type_size(mpi_type, &type_size);
+      buffer_description buffer_desc{b_signed, b_type, type_size, lens[i] };
+      bool do_copy = true;
+
+      auto new_buffer = _galloc->update_or_allocate( buffer_desc, {}, data[i], do_copy );
+     
+      buffer_key = new_buffer.header().get_key();
+
+      std::cout << i<<") Adding memory blocks : " << buffer_key <<  std::endl;
+      zmsgb.add_memref(buffer_type, 
+                       b_signed, b_type, type_size, 
+                       buffer_key, lens[i] );
     }
 
     zmsgb.finalize();
     /////////////////////////////////////////////////////////
     ///////////adding pending message to registry////////////
     std::cout << "Adding entry to pmsg registry " << std::endl;
-    std::cout << "key : "<< key << 
+    std::cout << "key : "<< msg_key << 
                  ", dst : "<< dst <<
                  ", tag : "<< tag << std::endl;
-    _pmsg_registry.add_send_pmsg( key, dst, tag, 
+    _pmsg_registry.add_send_pmsg( msg_key, dst, tag, 
                                   zmsgb.get_zmsg().clone() );
     /////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////

@@ -109,6 +109,28 @@ zmsg_builder<Ts...>& zmsg_builder<Ts...>::add_sections(std::list<Targs>... args)
 }
 
 template<typename ...Ts>
+zmsg_builder<Ts...>& zmsg_builder<Ts...>::add_memref( int buffer_type, int b_signed, int b_int_float, 
+                                                      int type_size, std::string buffer_id, size_t sz)
+{
+  //add type description
+  this->_msg.addtyp<ushort>( (ushort) find_section_type<zmq::message_t>() );
+  //add vector size
+  this->_msg.addtyp<ulong>( buffer_type );
+  //add vector size
+  this->_msg.addtyp<ulong>( sz );
+  //add signed information
+  this->_msg.addtyp<ulong>( b_signed );
+  //add type information
+  this->_msg.addtyp<ulong>( b_int_float );
+  //add type size information
+  this->_msg.addtyp<ulong>( type_size );
+  //add memory block
+  this->_msg.addstr( buffer_id );
+
+  return *this;
+}
+
+template<typename ...Ts>
 zmsg_builder<Ts...>& zmsg_builder<Ts...>::add_memblk( int b_signed, int b_int_float, 
                                                       int type_size, const void* mem, size_t sz)
 {
@@ -277,3 +299,10 @@ zmsg_builder<std::string,std::string, std::string>::add_raw_data_top( std::strin
 template
 zmsg_builder<std::string, std::string, std::string>& 
 zmsg_builder<std::string,std::string, std::string>::add_raw_data_top( std::string, std::string, std::string, std::string );
+//8)
+template zmsg_builder<std::string, std::string>&
+zmsg_builder<std::string, std::string>::add_memref(int,int, int, int, std::string, size_t);
+template zmsg_builder<std::string, std::string, std::string>&
+zmsg_builder<std::string, std::string, std::string>::add_memref(int, int, int, int, std::string, size_t);
+template zmsg_builder<std::string, std::string, std::string, std::string>&
+zmsg_builder<std::string, std::string, std::string, std::string>::add_memref(int, int, int, int, std::string, size_t);

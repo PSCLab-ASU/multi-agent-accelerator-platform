@@ -19,6 +19,7 @@
 #include <functional>
 #include <zmsg_builder.h>
 #include <mpi.h>
+#include <runtime_ctx.h>
 
 #ifndef CLIENT_UTILS
 #define CLIENT_UTILS
@@ -95,23 +96,66 @@ enum api_tags {
   mpi_info_free,
   mpi_info_set,
   mpi_info_get,
+  mpi_alloc_mem,
+  mpi_free_mem,
   mpi_send,
   mpi_recv
 
 };
 
+/*enum {
+  MPIX_FLOAT = 0,
+  MPIX_CHAR,
+  MPIX_DOUBLE,
+  MPIX_UNSIGNED_LONG,
+  MPIX_INT,
+  MPIX_NORMAL_MARKER,
+  MPIX_INT_FLOAT,
+  MPIX_INT_CHAR,
+  MPIX_INT_DOUBLE,
+  MPIX_INT_UNSIGNED_LONG,
+  MPIX_INT_INT,
+  MPIX_INTERNAL_MARKER,
+  MPIX_REF_FLOAT,
+  MPIX_REF_CHAR,
+  MPIX_REF_DOUBLE,
+  MPIX_REF_UNSIGNED_LONG,
+  MPIX_REF_INT,
+
+  MPIX_END_MARKER
+};
+*/
+
+enum BUFFER_TYPE
+{
+  NORMAL_BUFFER=0,
+  GLOBAL_BUFFER,
+  SYSTEM_BUFFER
+};
+
 //(1) signed or unsigned
 //(2) INT or REAL
 //(3) size of datatype
-typedef std::tuple<int, int> zdata_seg_t;
+typedef std::tuple<int, int, int, int> zdata_seg_t;
 
 const std::map<uint, zdata_seg_t> g_mpi_type_conv
 {
- {MPI_FLOAT,          {1, 0} },
- {MPI_CHAR,           {0, 1} },
- {MPI_DOUBLE,         {1, 0} },
- {MPI_UNSIGNED_LONG,  {0, 1} },
- {MPI_INT,            {1, 1} }
+
+ {MPIX_FLOAT,              {NORMAL_BUFFER, 1, 0, MPI_FLOAT        } },
+ {MPIX_CHAR,               {NORMAL_BUFFER, 0, 1, MPI_CHAR         } },
+ {MPIX_DOUBLE,             {NORMAL_BUFFER, 1, 0, MPI_DOUBLE       } },
+ {MPIX_UNSIGNED_LONG,      {NORMAL_BUFFER, 0, 1, MPI_UNSIGNED_LONG} },
+ {MPIX_INT,                {NORMAL_BUFFER, 1, 1, MPI_INT          } },
+ {MPIX_INT_FLOAT,          {GLOBAL_BUFFER, 1, 0, MPI_FLOAT        } },
+ {MPIX_INT_CHAR,           {GLOBAL_BUFFER, 0, 1, MPI_CHAR         } },
+ {MPIX_INT_DOUBLE,         {GLOBAL_BUFFER, 1, 0, MPI_DOUBLE       } },
+ {MPIX_INT_UNSIGNED_LONG,  {GLOBAL_BUFFER, 0, 1, MPI_UNSIGNED_LONG} },
+ {MPIX_INT_INT,            {GLOBAL_BUFFER, 1, 1, MPI_INT          } },
+ {MPIX_REF_FLOAT,          {SYSTEM_BUFFER, 1, 0, MPI_FLOAT        } },
+ {MPIX_REF_CHAR,           {SYSTEM_BUFFER, 0, 1, MPI_CHAR         } },
+ {MPIX_REF_DOUBLE,         {SYSTEM_BUFFER, 1, 0, MPI_DOUBLE       } },
+ {MPIX_REF_UNSIGNED_LONG,  {SYSTEM_BUFFER, 0, 1, MPI_UNSIGNED_LONG} },
+ {MPIX_REF_INT,            {SYSTEM_BUFFER, 1, 1, MPI_INT          } }
 
 };
 

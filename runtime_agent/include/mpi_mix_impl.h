@@ -62,6 +62,9 @@ class mpi_mix_impl : public mpi_pv_interface
     mpi_return operator()( std::integral_constant<api_tags, mpi_recv>, void *, int, uint, int, int, int, MPI_Status*, metadata& ) final;
     mpi_return operator()( std::integral_constant<api_tags, mpi_test>, metadata& ) final;
 
+    mpi_return operator()( std::integral_constant<api_tags, mpi_alloc_mem>, int, int, void **, metadata& ) final;
+    mpi_return operator()( std::integral_constant<api_tags, mpi_free_mem>, void **, metadata& ) final;
+
   private:
     
     //connect the data from MPI to accel services and vice-versa

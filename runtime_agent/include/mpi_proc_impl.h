@@ -36,7 +36,9 @@ class mpi_proc_impl : public mpi_pv_interface
     mpi_return operator()( std::integral_constant<api_tags, mpi_send>, const void *, int, uint, int, int, int, metadata& ) final;
     mpi_return operator()( std::integral_constant<api_tags, mpi_recv>, void *, int, uint, int, int, int, MPI_Status*, metadata& ) final;
     mpi_return operator()( std::integral_constant<api_tags, mpi_test>, metadata& ) final;
- 
+    mpi_return operator()( std::integral_constant<api_tags, mpi_alloc_mem>, int, int, void **, metadata& ) final;
+    mpi_return operator()( std::integral_constant<api_tags, mpi_free_mem>, void **, metadata& ) final;    
+
     void system_update();
     void init_thread_components();
     bool is_initialized(){ return (_is_mpi_initialized != 0); }

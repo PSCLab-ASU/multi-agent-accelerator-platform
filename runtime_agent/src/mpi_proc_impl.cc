@@ -264,6 +264,18 @@ mpi_return mpi_proc_impl::operator()(std::integral_constant<api_tags, mpi_test>,
   return mpi_return{};
 }
 
+mpi_return mpi_proc_impl::operator()(std::integral_constant<api_tags, mpi_alloc_mem>, int, int, void **, metadata&)
+{
+  std::lock_guard<std::mutex> guard( *_mix_mutex );
+  return mpi_return{};
+}
+
+mpi_return mpi_proc_impl::operator()(std::integral_constant<api_tags, mpi_free_mem>, void **, metadata&)
+{
+  std::lock_guard<std::mutex> guard( *_mix_mutex );
+  return mpi_return{};
+}
+
 mpi_return mpi_proc_impl::_default_action ( ACTION_REG_SIGNATURE )
 {
   std::cout << "entering _default_action... " << std::endl;
